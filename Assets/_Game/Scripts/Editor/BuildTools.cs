@@ -46,19 +46,16 @@ namespace CircuitBreaker.EditorTools
             Debug.Log("[CircuitBreaker] Android prepared.\n" + report);
         }
 
-        [MenuItem("CircuitBreaker/Android/1. Build Debug APK (test ads + debug tools)")]
-        public static void BuildDebugApk() => Build(AdMode.TestStub, bundle: false, debug: true);
-
-        [MenuItem("CircuitBreaker/Android/2. Build Closed-Test AAB (test ads, no debug)")]
+        [MenuItem("CircuitBreaker/Android/1. Build Closed-Test AAB (test ads)")]
         public static void BuildClosedTest() => Build(AdMode.TestStub, bundle: true, debug: false);
 
-        [MenuItem("CircuitBreaker/Android/3. Build Closed-Test AAB (AdMob test ads, no debug)")]
+        [MenuItem("CircuitBreaker/Android/2. Build Closed-Test AAB (AdMob test ads)")]
         public static void BuildClosedTestAdMob() => Build(AdMode.AdMobTest, bundle: true, debug: false);
 
-        [MenuItem("CircuitBreaker/Android/4. Build Release AAB (AdMob production IDs)")]
+        [MenuItem("CircuitBreaker/Android/3. Build Release AAB (AdMob production IDs)")]
         public static void BuildReleaseAdMob() => Build(AdMode.AdMobProduction, bundle: true, debug: false);
 
-        [MenuItem("CircuitBreaker/Android/5. Build Release AAB (no ads)")]
+        [MenuItem("CircuitBreaker/Android/4. Build Release AAB (no ads)")]
         public static void BuildRelease() => Build(AdMode.None, bundle: true, debug: false);
 
         // ------------------------------------------------------------------

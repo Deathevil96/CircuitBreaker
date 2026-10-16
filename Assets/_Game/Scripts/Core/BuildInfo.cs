@@ -4,7 +4,7 @@ namespace CircuitBreaker.Core
     public static class BuildInfo
     {
         /// <summary>Player-facing app version (keep PlayerSettings.bundleVersion in sync).</summary>
-        public const string AppVersion = "0.1.0";
+        public const string AppVersion = "1.0.0";
 
         /// <summary>Layout of the saved data. Bump when keys change and add a step in SaveSystem.Migrate.</summary>
         public const int SaveSchema = 3;

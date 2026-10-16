@@ -9,6 +9,9 @@ Version numbers live in `Assets/_Game/Scripts/Core/BuildInfo.cs`. Four numbers a
 | Generator version | what each level number produces | generator, catalog, or shape changes alter levels |
 | Economy version | rewards, caps, prices, ad rules | any number in `Economy.cs` changes |
 
+## 1.0.0 - release (branch master)
+Same game as 0.1.0 with all levels, minus the debug tools, level test and debug APK menu. Level window, loading screens and branding are unchanged.
+
 ## 0.1.0 - first store build: closed testing (save 3, gen 5, eco 2)
 Store numbering starts here. Closed testing uses 0.x on branch `main`; the public release is 1.0.0 on branch `master`. Earlier entries below were internal milestones.
 - Renamed to **Arrow Breaker: Circuit Puzzle**. Company: Misal Interactive. Package `com.misalinteractive.arrowbreaker`.
