@@ -24,6 +24,7 @@ namespace CircuitBreaker.EditorTools
             var cam = Camera.main;
             var ui = Object.FindFirstObjectByType<GameUI>();
             if (cam == null || ui == null) return "not in play mode";
+            Tick(24);                                   // grids and fitters need a few passes to settle
             var canvas = ui.GetComponentInChildren<Canvas>(true);
             var camData = cam.GetUniversalAdditionalCameraData();
             var postFx = GameObject.Find("PostFX");
@@ -147,6 +148,8 @@ namespace CircuitBreaker.EditorTools
             {
                 foreach (var mb in Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
                     mb.SendMessage("Update", SendMessageOptions.DontRequireReceiver);
+                foreach (var lg in Object.FindObjectsByType<UnityEngine.UI.LayoutGroup>(FindObjectsSortMode.None))
+                    UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)lg.transform);
                 Canvas.ForceUpdateCanvases();
             }
         }

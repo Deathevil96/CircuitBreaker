@@ -523,10 +523,12 @@ namespace CircuitBreaker.Core
             }
             int today = Clock.Today;
             int ty = today / 10000, tm = (today / 100) % 100;
-            d.dailySub = Daily.IsCleared(today) ? "Today cleared  ·  " + Daily.ClearedInMonth(ty, tm) + " of " + Daily.DaysInMonth(ty, tm) + " this month"
-                : "Today  ·  " + DifficultyInfo.Name(Daily.TierFor(today)) + "  ·  " + Daily.ClearedInMonth(ty, tm) + " of " + Daily.DaysInMonth(ty, tm) + " this month";
-            d.freeplaySub = "Pick a difficulty, play endlessly";
-            d.overloadSub = Stats.OverloadBest > 0 ? "Score attack  ·  best " + Stats.OverloadBest.ToString("N0") : "Score attack against the clock";
+            int cleared = Daily.ClearedInMonth(ty, tm), days = Daily.DaysInMonth(ty, tm);
+            d.dailySub = Daily.IsCleared(today) ? "Today cleared" : "Today  ·  " + DifficultyInfo.Name(Daily.TierFor(today));
+            d.dailyMonth = cleared + " of " + days + " this month";
+            d.dailyFraction = days > 0 ? cleared / (float)days : 0f;
+            d.freeplaySub = "Pick a tier";
+            d.overloadSub = Stats.OverloadBest > 0 ? "Best " + Stats.OverloadBest.ToString("N0") : "Beat the clock";
             return d;
         }
 

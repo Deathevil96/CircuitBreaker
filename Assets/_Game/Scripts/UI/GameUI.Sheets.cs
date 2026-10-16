@@ -111,20 +111,73 @@ namespace CircuitBreaker.UI
         public void ShowWin(WinData d)
         {
             ClearChildren(_winBody);
-            SheetTitle(_winBody, d.title, d.subtitle);
-            UiKit.Divider(_winBody);
-            foreach (var kv in d.rows) KeyValue(_winBody, kv.Key, kv.Value);
-            if (d.rewards.Count > 0)
+
+            // glow behind the header, ignored by the layout
+            var glow = UiKit.Img(_winBody, Theme.A(Theme.Accent, 0.16f), ProcSprites.GlowDot);
+            glow.raycastTarget = false;
+            glow.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            glow.rectTransform.anchorMin = glow.rectTransform.anchorMax = new Vector2(0, 1);
+            glow.rectTransform.pivot = new Vector2(0, 1);
+            glow.rectTransform.sizeDelta = new Vector2(620, 420);
+            glow.rectTransform.anchoredPosition = new Vector2(-120, 140);
+
+            // header: title left, coin reward right
+            string coins = null;
+            var tiles = new List<KeyValuePair<string, string>>();
+            foreach (var kv in d.rows) { if (kv.Key == "Coins") coins = kv.Value; else tiles.Add(kv); }
+
+            var head = UiKit.Row(_winBody, 16, TextAnchor.MiddleLeft);
+            UiKit.Size(head, h: 120);
+            var hc = UiKit.Column(head, 4, fitHeight: false, align: TextAnchor.MiddleLeft);
+            UiKit.Size(hc, flexW: 1);
+            var t = UiKit.Label(hc, d.title, Theme.H1 + 4, Theme.Accent, TextAnchor.MiddleLeft, bold: true); UiKit.Size(t, h: 66);
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            var sub = UiKit.Label(hc, d.subtitle ?? "", Theme.Caption, Theme.Dim, TextAnchor.MiddleLeft); UiKit.Size(sub, h: 36);
+            if (coins != null)
             {
-                UiKit.Divider(_winBody);
-                var rl = UiKit.Label(_winBody, "Rewards", Theme.Caption, Theme.Faint, TextAnchor.MiddleLeft, bold: true); UiKit.Size(rl, h: 34);
-                foreach (var r in d.rewards)
+                var cc = UiKit.Column(head, 0, fitHeight: false, align: TextAnchor.MiddleRight);
+                var cv = UiKit.Label(cc, coins, 54, CyberTheme.Arrow(3), TextAnchor.MiddleRight, bold: true); UiKit.Size(cv, h: 66);
+                cv.horizontalOverflow = HorizontalWrapMode.Overflow;
+                var cl = UiKit.Label(cc, "coins", Theme.Micro, Theme.Dim, TextAnchor.MiddleRight); UiKit.Size(cl, h: 30);
+            }
+
+            // stat tiles side by side
+            if (tiles.Count > 0)
+            {
+                var row = UiKit.Row(_winBody, 14, TextAnchor.MiddleLeft, expand: true);
+                UiKit.Size(row, h: 112);
+                row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+                foreach (var kv in tiles)
                 {
-                    var l = UiKit.Label(_winBody, r, Theme.Body - 2, Theme.Text, TextAnchor.MiddleLeft); UiKit.Size(l, h: 44);
+                    var tile = UiKit.Card(row, Theme.Surface2, Theme.Line, 18f);
+                    UiKit.Size(tile.root, flexW: 1).preferredWidth = 0;
+                    var col = UiKit.Column(tile.content, 2, fitHeight: false, align: TextAnchor.MiddleCenter);
+                    UiKit.Stretch(col);
+                    var v = UiKit.Label(col, kv.Value, Theme.H2 - 4, Theme.Text, TextAnchor.MiddleCenter, bold: true); UiKit.Size(v, h: 46);
+                    var k = UiKit.Label(col, kv.Key, Theme.Micro - 2, Theme.Dim, TextAnchor.MiddleCenter); UiKit.Size(k, h: 28);
                 }
             }
-            UiKit.Spacer(_winBody, 6);
-            UiKit.MakeButton(_winBody, d.primaryText, ButtonStyle.Primary, () => NextClicked?.Invoke(), null, 108);
+
+            // rewards as chips
+            if (d.rewards.Count > 0)
+            {
+                var chips = UiKit.Column(_winBody, 10, fitHeight: true, align: TextAnchor.UpperLeft);
+                foreach (var r in d.rewards)
+                {
+                    var chip = UiKit.Rounded(chips, Color.Lerp(Theme.Surface, CyberTheme.Arrow(2), 0.10f), 30f);
+                    var g = chip.gameObject.AddComponent<HorizontalLayoutGroup>();
+                    g.padding = new RectOffset(26, 26, 8, 8); g.spacing = 12;
+                    g.childAlignment = TextAnchor.MiddleLeft;
+                    g.childControlWidth = g.childControlHeight = true; g.childForceExpandWidth = g.childForceExpandHeight = false;
+                    chip.gameObject.AddComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+                    var star = UiKit.Icon(chip.rectTransform, "star", 30, CyberTheme.Arrow(2)); UiKit.Size(star.rectTransform, w: 30, h: 30);
+                    var rl = UiKit.Label(chip.rectTransform, r, Theme.Caption, Theme.Text, TextAnchor.MiddleLeft); rl.horizontalOverflow = HorizontalWrapMode.Overflow;
+                    UiKit.Size(chip.rectTransform, h: 56);
+                }
+            }
+
+            UiKit.Spacer(_winBody, 4);
+            UiKit.MakeButton(_winBody, d.primaryText, ButtonStyle.Primary, () => NextClicked?.Invoke(), "next", 112, Theme.H2 - 4);
             if (d.showSecondary) UiKit.MakeButton(_winBody, d.secondaryText, ButtonStyle.Ghost, () => ReplayClicked?.Invoke(), null, 80);
             SetLayer(_winSheet, true);
         }
@@ -214,10 +267,26 @@ namespace CircuitBreaker.UI
             {
                 var diff = d;
                 var row = UiKit.MakeRow(_freeBody, DifficultyInfo.Name(d), Describe(d), null, () => { SetLayer(_freeplaySheet, false); FreeplayStartClicked?.Invoke(diff); }, null, true, 104);
-                if (d == Difficulty.Nightmare) row.label.color = Theme.Danger;
+                Color tc = TierColor(d);
+                row.fill.color = Color.Lerp(Theme.Surface, tc, 0.12f);
+                row.border.color = Theme.A(tc, 0.55f);
+                row.label.color = d == Difficulty.Nightmare ? Theme.Danger : Theme.Text;
             }
             UiKit.MakeButton(_freeBody, "Close", ButtonStyle.Ghost, () => SetLayer(_freeplaySheet, false), null, 76);
             SetLayer(_freeplaySheet, true);
+        }
+
+        private static Color TierColor(Difficulty d)
+        {
+            switch (d)
+            {
+                case Difficulty.Easy: return CyberTheme.Arrow(2);
+                case Difficulty.Medium: return CyberTheme.Arrow(0);
+                case Difficulty.Hard: return CyberTheme.Arrow(3);
+                case Difficulty.SuperHard: return CyberTheme.Arrow(4);
+                case Difficulty.UltraHard: return CyberTheme.Arrow(1);
+                default: return Theme.Danger;
+            }
         }
 
         private static string Describe(Difficulty d)
