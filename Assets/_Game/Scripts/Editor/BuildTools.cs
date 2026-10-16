@@ -55,6 +55,9 @@ namespace CircuitBreaker.EditorTools
         [MenuItem("CircuitBreaker/Android/3. Build Release AAB (AdMob production IDs)")]
         public static void BuildReleaseAdMob() => Build(AdMode.AdMobProduction, bundle: true, debug: false);
 
+        [MenuItem("CircuitBreaker/Android/5. Build Release APK (no ads, install on a phone)")]
+        public static void BuildReleaseApk() => Build(AdMode.None, bundle: false, debug: false);
+
         [MenuItem("CircuitBreaker/Android/4. Build Release AAB (no ads)")]
         public static void BuildRelease() => Build(AdMode.None, bundle: true, debug: false);
 

@@ -14,7 +14,7 @@
     <setting name="gradlePropertiesTemplateEnabled" value="True" />
     <setting name="gradleTemplateEnabled" value="True" />
     <setting name="localMavenRepoDir" value="Assets/GeneratedLocalRepo" />
-    <setting name="patchAndroidManifest" value="True" />
+    <setting name="patchAndroidManifest" value="False" />
     <setting name="projectExportEnabled" value="False" />
     <setting name="useFullCustomMavenRepoPathWhenExport" value="True" />
     <setting name="useFullCustomMavenRepoPathWhenNotExport" value="False" />
