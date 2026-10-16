@@ -91,15 +91,24 @@ namespace CircuitBreaker.UI
                 int level = lvl;
                 bool unlocked = lvl <= progress;
                 var d = LevelCatalog.DifficultyOf(lvl);
-                var s = UiKit.Card(grid, lvl == current ? Theme.Surface2 : Theme.Surface, lvl == current ? Theme.Text : Theme.Line, 14f, raycast: true);
+                bool isCurrent = lvl == current;
+                bool first = unlocked && Stats.FirstTryWon(lvl);
+                bool milestone = DifficultyInfo.IsMilestone(d);
+                Color accent = d == Difficulty.Nightmare ? Theme.Danger : milestone ? CyberTheme.Arrow(3) : Theme.Accent;
+                Color fill = isCurrent ? Theme.Accent : unlocked ? Color.Lerp(Theme.Surface, accent, milestone ? 0.14f : 0.07f) : Theme.Surface;
+                Color border = isCurrent ? Theme.Accent : unlocked ? Theme.A(accent, milestone ? 0.65f : 0.30f) : Theme.Line;
+                var s = UiKit.Card(grid, fill, border, 18f, raycast: true);
                 s.root.name = "L" + lvl;
-                var col = UiKit.Column(s.content, 2, fitHeight: false, align: TextAnchor.MiddleCenter);
+                var col = UiKit.Column(s.content, 0, fitHeight: false, align: TextAnchor.MiddleCenter);
                 UiKit.Stretch(col);
-                var num = UiKit.Label(col, lvl.ToString(), Theme.H2, unlocked ? Theme.Text : Theme.Faint, TextAnchor.MiddleCenter, bold: true);
-                UiKit.Size(num, h: 50);
-                string sub = !unlocked ? "" : Stats.FirstTryWon(lvl) ? "first try" : DifficultyInfo.IsMilestone(d) ? DifficultyInfo.Name(d) : "";
-                var cap = UiKit.Label(col, sub, Theme.Micro - 2, d == Difficulty.Nightmare ? Theme.Danger : Theme.Dim, TextAnchor.MiddleCenter);
-                UiKit.Size(cap, h: 28);
+                var num = UiKit.Label(col, lvl.ToString(), Theme.H2, isCurrent ? Theme.Bg : unlocked ? Theme.Text : Theme.Faint, TextAnchor.MiddleCenter, bold: true);
+                UiKit.Size(num, h: 54);
+                string sub = !unlocked ? "" : first ? "first try" : milestone ? DifficultyInfo.Name(d) : "";
+                if (sub.Length > 0)
+                {
+                    var cap = UiKit.Label(col, sub, Theme.Micro - 3, isCurrent ? Theme.A(Theme.Bg, 0.7f) : first ? CyberTheme.Arrow(2) : accent, TextAnchor.MiddleCenter);
+                    UiKit.Size(cap, h: 26);
+                }
                 var tap = UiKit.Tappable(s, () => { if (unlocked) { SetLayer(_levelsPage.root, false); LevelPicked?.Invoke(level); } });
                 tap.button.interactable = unlocked;
             }
@@ -129,6 +138,7 @@ namespace CircuitBreaker.UI
         public void ShowRecords()
         {
             ClearChildren(_recordsPage.content);
+            _statColor = 0;
             var c = _recordsPage.content;
 
             Section(c, "Personal records");
@@ -169,14 +179,17 @@ namespace CircuitBreaker.UI
             UiKit.Size(l, h: 56);
         }
 
+        private static int _statColor;
+
         private static void StatCard(Transform row, string caption, string value, string sub1, string sub2)
         {
-            var s = UiKit.Card(row, Theme.Surface, Theme.Line, 18f);
+            var accent = CyberTheme.Arrow(_statColor++ % 5);
+            var s = UiKit.Card(row, Color.Lerp(Theme.Surface, accent, 0.07f), Theme.A(accent, 0.35f), 22f);
             UiKit.Size(s.root, h: 210, flexW: 1);
             var col = UiKit.Column(s.content, 4, 26, 22, fitHeight: false, align: TextAnchor.UpperLeft);
             UiKit.Stretch(col);
             var cap = UiKit.Label(col, caption, Theme.Caption, Theme.Dim, TextAnchor.MiddleLeft); UiKit.Size(cap, h: 32);
-            var val = UiKit.Label(col, value, 58, Theme.Text, TextAnchor.MiddleLeft, bold: true); UiKit.Size(val, h: 72);
+            var val = UiKit.Label(col, value, 58, accent, TextAnchor.MiddleLeft, bold: true); UiKit.Size(val, h: 72);
             var s1 = UiKit.Label(col, sub1, Theme.Micro + 1, Theme.Dim, TextAnchor.MiddleLeft); UiKit.Size(s1, h: 28);
             var s2 = UiKit.Label(col, sub2, Theme.Micro + 1, Theme.Faint, TextAnchor.MiddleLeft); UiKit.Size(s2, h: 28);
         }
@@ -184,12 +197,12 @@ namespace CircuitBreaker.UI
         private static void AchievementRow(Transform parent, Achievement a)
         {
             bool done = a.Unlocked;
-            var s = UiKit.Card(parent, Theme.Surface, Theme.Line, 16f);
+            var s = UiKit.Card(parent, done ? Color.Lerp(Theme.Surface, CyberTheme.Arrow(2), 0.08f) : Theme.Surface, done ? Theme.A(CyberTheme.Arrow(2), 0.45f) : Theme.Line, 18f);
             s.root.name = "Ach_" + a.id;
             UiKit.Size(s.root, h: 150);
             var row = UiKit.Row(s.content, 22, TextAnchor.MiddleLeft);
             UiKit.Stretch(row, 28, 0, 28, 0);
-            var ic = UiKit.Icon(row, done ? "check" : "lock", 46, done ? Theme.Text : Theme.Faint);
+            var ic = UiKit.Icon(row, done ? "check" : "lock", 46, done ? CyberTheme.Arrow(2) : Theme.Faint);
             UiKit.Size(ic.rectTransform, w: 46, h: 46);
 
             var col = UiKit.Column(row, 6, fitHeight: false, align: TextAnchor.MiddleLeft);
@@ -203,6 +216,7 @@ namespace CircuitBreaker.UI
             else if (a.target > 1)
             {
                 var bar = UiKit.ProgressBar(col, a.Progress / (float)a.target, 8);
+                bar.color = Theme.Accent;
                 UiKit.Size(bar.transform.parent, h: 8);
             }
 
@@ -279,6 +293,7 @@ namespace CircuitBreaker.UI
             UiKit.Label(head, cleared + " / " + days, Theme.Body, Theme.Dim, TextAnchor.MiddleRight);
 
             var bar = UiKit.ProgressBar(c, cleared / (float)days, 10);
+            bar.color = CyberTheme.Arrow(3);
             UiKit.Size(bar.transform.parent, h: 10);
             var bl = UiKit.Label(c, Daily.BadgeEarned(year, month) ? "Monthly badge earned" : "Clear every day this month to earn the monthly badge. Missed days can be played until the month ends.",
                 Theme.Caption, Theme.Dim, TextAnchor.MiddleLeft, wrap: true);
@@ -302,12 +317,15 @@ namespace CircuitBreaker.UI
             {
                 int date = year * 10000 + month * 100 + day;
                 bool isCleared = Daily.IsCleared(date), playable = Daily.IsPlayable(date), sel = date == _dailySelected;
-                var s = UiKit.Card(grid, isCleared ? Theme.Surface2 : Theme.Surface, sel ? Theme.Text : (date == today ? Theme.Dim : Theme.Line), 14f, raycast: true);
+                Color amberC = CyberTheme.Arrow(3);
+                Color fillC = sel ? amberC : isCleared ? Color.Lerp(Theme.Surface, amberC, 0.14f) : Theme.Surface;
+                Color edgeC = sel ? amberC : isCleared ? Theme.A(amberC, 0.55f) : (date == today ? Theme.Dim : Theme.Line);
+                var s = UiKit.Card(grid, fillC, edgeC, 16f, raycast: true);
                 var col = UiKit.Column(s.content, 0, fitHeight: false, align: TextAnchor.MiddleCenter);
                 UiKit.Stretch(col);
-                var n = UiKit.Label(col, day.ToString(), Theme.Body - 2, playable ? Theme.Text : Theme.Faint, TextAnchor.MiddleCenter, bold: true);
+                var n = UiKit.Label(col, day.ToString(), Theme.Body - 2, sel ? Theme.Bg : playable ? Theme.Text : Theme.Faint, TextAnchor.MiddleCenter, bold: true);
                 UiKit.Size(n, h: 44);
-                if (isCleared) { var ck = UiKit.Icon(col, "check", 30, Theme.Dim); UiKit.Size(ck.rectTransform, w: 30, h: 30); }
+                if (isCleared) { var ck = UiKit.Icon(col, "check", 30, sel ? Theme.Bg : amberC); UiKit.Size(ck.rectTransform, w: 30, h: 30); }
                 else UiKit.Spacer(col, 30);
                 int captured = date;
                 var tap = UiKit.Tappable(s, () => { if (Daily.IsPlayable(captured)) { _dailySelected = captured; RebuildDaily(); } });

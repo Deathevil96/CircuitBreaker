@@ -16,6 +16,7 @@ namespace CircuitBreaker.UI
         public static readonly Color Text = Hex("F4F4F6");
         public static readonly Color Dim = Hex("9A9AA4");
         public static readonly Color Faint = Hex("5A5A64");
+        public static readonly Color Accent = Hex("19E6F2");
         public static readonly Color Danger = Hex("D86A6A");
         public static readonly Color Overlay = new Color(0f, 0f, 0f, 0.72f);
 
@@ -185,8 +186,8 @@ namespace CircuitBreaker.UI
         public static UiButton MakeButton(Transform parent, string text, ButtonStyle style, Action onClick, string iconName = null, float height = 104, int fontSize = Theme.Body)
         {
             var ub = new UiButton { style = style };
-            Color fillC = style == ButtonStyle.Primary ? Theme.Text : style == ButtonStyle.Secondary ? Theme.Surface : Color.clear;
-            Color borderC = style == ButtonStyle.Primary ? Theme.Text : style == ButtonStyle.Secondary ? Theme.Line : Color.clear;
+            Color fillC = style == ButtonStyle.Primary ? Theme.Accent : style == ButtonStyle.Secondary ? Theme.Surface : Color.clear;
+            Color borderC = style == ButtonStyle.Primary ? Theme.Accent : style == ButtonStyle.Secondary ? Theme.Line : Color.clear;
             Color textC = style == ButtonStyle.Primary ? Theme.Bg : style == ButtonStyle.Secondary ? Theme.Text : Theme.Dim;
 
             var s = Card(parent, fillC, borderC, 16f, raycast: true);

@@ -5,12 +5,22 @@ namespace CircuitBreaker.Fx
     /// <summary>Procedurally generated sprites and textures so the game needs no imported art.</summary>
     public static class ProcSprites
     {
+        private static Sprite _arrowGlyph;
         private static Sprite _circle, _ring, _triangle, _heart, _pixel, _rounded, _lock, _glowDot;
         private static Texture2D _dash;
         private static Material _lineMat;
 
         /// <summary>One shared unlit material for every line in the game (vertex colours carry the tint), so nothing leaks per level.</summary>
         public static Material LineMaterial => _lineMat != null ? _lineMat : (_lineMat = new Material(Shader.Find("Sprites/Default")));
+
+        /// <summary>A thin straight arrow pointing right (shaft plus head), soft edges. Used for decoration.</summary>
+        public static Sprite ArrowGlyph => _arrowGlyph ??= Make(128, (x, y, n) =>
+        {
+            float u = x / (n - 1f), v = y / (n - 1f);
+            float shaft = Mathf.Clamp01((0.022f - Mathf.Abs(v - 0.5f)) * n * 0.6f) * Mathf.Clamp01((u - 0.05f) * n * 0.5f) * Mathf.Clamp01((0.74f - u) * n * 0.5f);
+            float head = Mathf.Clamp01(((0.96f - u) * 0.5f - Mathf.Abs(v - 0.5f) * 0.5f) * n * 0.6f) * Mathf.Clamp01((u - 0.70f) * n * 0.5f);
+            return Mathf.Max(shaft, head);
+        });
 
         public static Sprite Pixel => _pixel ??= Make(4, (x, y, n) => 1f, 4);
         public static Sprite Circle => _circle ??= Make(64, (x, y, n) => Smooth(Dist(x, y, n), 0.5f));
