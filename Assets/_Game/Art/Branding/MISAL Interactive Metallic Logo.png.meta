@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: abd97c9a173b84265ad13525e52b8260
+guid: 014e4863ecd9940029f337f7a9eedff7
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 6788244871427077021
-    second: MisalInteractiveLogo_0
+      213: -3144765552462846002
+    second: MISAL Interactive Metallic Logo_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -72,7 +72,7 @@ TextureImporter:
   platformSettings:
   - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
-    maxTextureSize: 1024
+    maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
     textureCompression: 1
@@ -139,13 +139,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: MisalInteractiveLogo_0
+      name: MISAL Interactive Metallic Logo_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 1254
-        height: 1254
+        width: 1536
+        height: 1024
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d9337c1beb0b43e50800000000000000
-      internalID: 6788244871427077021
+      spriteID: ec72197446c8b54d0800000000000000
+      internalID: -3144765552462846002
       vertices: []
       indices: 
       edges: []
@@ -164,7 +164,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      MisalInteractiveLogo_0: 6788244871427077021
+      MISAL Interactive Metallic Logo_0: -3144765552462846002
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

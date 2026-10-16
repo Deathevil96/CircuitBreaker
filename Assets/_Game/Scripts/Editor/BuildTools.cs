@@ -30,7 +30,7 @@ namespace CircuitBreaker.EditorTools
         private const string Alias = "arrowbreaker-upload";
         private const string DebugDefine = "CB_DEBUG";
         private const string BuildNumberFile = "ProjectSettings/BuildNumber.txt";
-        private const string LogoPath = "Assets/_Game/Art/Branding/MisalInteractiveLogo.png";
+        private const string LogoPath = "Assets/_Game/Art/Branding/MISAL Interactive Metallic Logo.png";
 
         [Serializable] private class KeystoreData { public string path, alias, storePass, keyPass; }
 
@@ -155,13 +155,13 @@ namespace CircuitBreaker.EditorTools
         {
             var importer = AssetImporter.GetAtPath(LogoPath) as TextureImporter;
             if (importer == null) { sb.AppendLine("  splash: logo not found at " + LogoPath + " (splash disabled)"); PlayerSettings.SplashScreen.show = false; return; }
-            if (importer.textureType != TextureImporterType.Sprite || importer.maxTextureSize > 1024)
+            if (importer.textureType != TextureImporterType.Sprite || importer.maxTextureSize != 2048)
             {
                 importer.textureType = TextureImporterType.Sprite;
                 importer.spriteImportMode = SpriteImportMode.Single;
                 importer.alphaIsTransparency = true;
                 importer.mipmapEnabled = false;
-                importer.maxTextureSize = 1024;
+                importer.maxTextureSize = 2048;
                 importer.SaveAndReimport();
             }
             var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(LogoPath);
