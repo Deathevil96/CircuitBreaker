@@ -51,7 +51,7 @@ namespace CircuitBreaker.Platform
         }
 #endif
 
-        private void OnUnlocked(Achievement a) => Report(a.id);
+        private void OnUnlocked(CircuitBreaker.Core.Achievement a) => Report(a.id);
 
         /// <summary>Sends every locally unlocked achievement that Play Games has not confirmed yet.</summary>
         public void SyncAll()
