@@ -7,7 +7,7 @@
 | Short description (max 80) | Slide arrows out of neon shapes. A calm, minimal logic puzzle. |
 | Category | Game > Puzzle |
 | Tags | Puzzle, Logic, Offline, Casual, Brain |
-| Contact email | support@misalinteractive.example.com (replace) |
+| Contact email | misalinteractive96@gmail.com |
 | Website | optional |
 | Privacy policy | host `privacy-policy.html` and paste the URL |
 

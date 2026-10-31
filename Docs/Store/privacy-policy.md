@@ -26,4 +26,4 @@ We do not sell personal information. We do not collect your name, email, contact
 The app is not directed to children under 13, and we do not knowingly collect information from them.
 
 ## Your choices and contact
-To ask a question or request help, email support@misalinteractive.example.com. Changes to this policy will be posted on this page with a new date.
+To ask a question or request help, email misalinteractive96@gmail.com. Changes to this policy will be posted on this page with a new date.

@@ -23,6 +23,7 @@ namespace CircuitBreaker.EditorTools
         private const string AdMobDefine = "CB_ADMOB";
         private const string AdMobProdDefine = "CB_ADMOB_PRODUCTION";
         private const string AdMobAndroidTestAppId = "ca-app-pub-3940256099942544~3347511713";   // Google public sample app id
+        private const string AdMobAndroidProdAppId = "ca-app-pub-7841394126110372~5099598560";   // Arrow Breaker (AdMob)
         private const string AdMobIosTestAppId = "ca-app-pub-3940256099942544~1458002511";
         private const string KeystoreDir = "Keystore";
         private const string KeystoreFile = "Keystore/arrowbreaker-upload.keystore";
@@ -108,7 +109,7 @@ namespace CircuitBreaker.EditorTools
             EditorUserBuildSettings.symlinkSources = false;
 
             GenerateAndAssignIcons();
-            EnsureAdMobSettings(sb);
+            EnsureAdMobSettings(sb, ads == AdMode.AdMobProduction);
             EnsureKeystore(sb);
 
             sb.AppendLine($"  version {BuildInfo.AppVersion} (code {PlayerSettings.Android.bundleVersionCode}), package {PlayerSettings.GetApplicationIdentifier(t)}");
@@ -185,7 +186,7 @@ namespace CircuitBreaker.EditorTools
         // ------------------------------------------------------------------
         // AdMob plugin settings (the plugin refuses to build without an App ID)
         // ------------------------------------------------------------------
-        private static void EnsureAdMobSettings(StringBuilder sb)
+        private static void EnsureAdMobSettings(StringBuilder sb, bool production)
         {
             Type t = null;
             foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
@@ -205,12 +206,13 @@ namespace CircuitBreaker.EditorTools
                 AssetDatabase.CreateAsset(asset, path);
             }
             const System.Reflection.BindingFlags f = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
-            SetIfEmpty(asset, t, "adMobAndroidAppId", AdMobAndroidTestAppId, f);
+            var idField = t.GetField("adMobAndroidAppId", f);
+            if (idField != null) idField.SetValue(asset, production ? AdMobAndroidProdAppId : AdMobAndroidTestAppId);
             SetIfEmpty(asset, t, "adMobIOSAppId", AdMobIosTestAppId, f);
             SetIfEmpty(asset, t, "userTrackingUsageDescription", "This identifier is used to deliver more relevant ads to you.", f);
             EditorUtility.SetDirty(asset);
             AssetDatabase.SaveAssets();
-            sb.AppendLine("  AdMob plugin: settings ready (test App ID unless you replaced it)");
+            sb.AppendLine("  AdMob plugin: settings ready (" + (production ? "production" : "test") + " Android App ID)");
         }
 
         private static void SetIfEmpty(ScriptableObject asset, Type t, string field, string value, System.Reflection.BindingFlags f)

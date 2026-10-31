@@ -1,9 +1,9 @@
 namespace CircuitBreaker.Core
 {
-    /// <summary>External links. Replace the placeholders before store submission.</summary>
+    /// <summary>External links. Public privacy policy URL and support contact.</summary>
     public static class AppLinks
     {
-        public const string PrivacyPolicyUrl = "https://misalinteractive.example.com/arrowbreaker/privacy";
-        public const string SupportEmail = "support@misalinteractive.example.com";
+        public const string PrivacyPolicyUrl = "https://deathevil96.github.io/arrowbreaker-privacy/";
+        public const string SupportEmail = "misalinteractive96@gmail.com";
     }
 }

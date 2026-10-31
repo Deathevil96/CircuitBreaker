@@ -9,13 +9,13 @@ namespace CircuitBreaker.Ads
     {
 #if CB_ADMOB_PRODUCTION
   #if UNITY_ANDROID
-        public const string Banner = "ca-app-pub-REPLACE_ME/REPLACE_ME";
-        public const string Rewarded = "ca-app-pub-REPLACE_ME/REPLACE_ME";
-        public const string Interstitial = "ca-app-pub-REPLACE_ME/REPLACE_ME";
+        public const string Banner = "ca-app-pub-7841394126110372/2473435221";
+        public const string Rewarded = "ca-app-pub-7841394126110372/8847271886";
+        public const string Interstitial = "ca-app-pub-7841394126110372/1043757307";
   #else
-        public const string Banner = "ca-app-pub-REPLACE_ME/REPLACE_ME";
-        public const string Rewarded = "ca-app-pub-REPLACE_ME/REPLACE_ME";
-        public const string Interstitial = "ca-app-pub-REPLACE_ME/REPLACE_ME";
+        public const string Banner = "ca-app-pub-IOS_NOT_SET/IOS_NOT_SET";
+        public const string Rewarded = "ca-app-pub-IOS_NOT_SET/IOS_NOT_SET";
+        public const string Interstitial = "ca-app-pub-IOS_NOT_SET/IOS_NOT_SET";
   #endif
 #else
   #if UNITY_ANDROID
