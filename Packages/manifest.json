@@ -54,7 +54,8 @@
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
     "com.unity.modules.xr": "1.0.0",
-    "com.google.ads.mobile": "11.6.0"
+    "com.google.ads.mobile": "11.6.0",
+    "com.google.play.games": "2.3.0"
   },
   "scopedRegistries": [
     {
@@ -62,7 +63,8 @@
       "url": "https://package.openupm.com",
       "scopes": [
         "com.google.ads.mobile",
-        "com.google.external-dependency-manager"
+        "com.google.external-dependency-manager",
+        "com.google.play.games"
       ]
     }
   ]

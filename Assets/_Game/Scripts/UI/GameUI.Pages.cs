@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using CircuitBreaker.Core;
 using CircuitBreaker.Fx;
+using CircuitBreaker.Platform;
 using CircuitBreaker.Generation;
 
 namespace CircuitBreaker.UI
@@ -154,6 +155,9 @@ namespace CircuitBreaker.UI
 
             UiKit.Spacer(c, 10);
             Section(c, "Achievements  " + Achievements.UnlockedCount + " / " + Achievements.All.Count);
+#if UNITY_ANDROID && !UNITY_EDITOR
+            UiKit.MakeButton(c, "Play Games achievements", ButtonStyle.Secondary, () => PlayGamesService.ShowAchievements(), null, 96);
+#endif
 
             AchievementGroup? lastGroup = null;
             foreach (var a in Achievements.All)

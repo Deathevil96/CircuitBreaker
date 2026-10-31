@@ -10,6 +10,7 @@ using UnityEngine.Rendering.Universal;
 using CircuitBreaker.Ads;
 using CircuitBreaker.Data;
 using CircuitBreaker.Fx;
+using CircuitBreaker.Platform;
 using CircuitBreaker.Gameplay;
 using CircuitBreaker.Generation;
 using CircuitBreaker.UI;
@@ -127,6 +128,7 @@ namespace CircuitBreaker.Core
             Cam.Tapped = OnScreenTap;
             Cam.PointerAllowed = UI.PointerInPlayArea;
             Achievements.Unlocked += UI.ShowAchievement;
+            PlayGamesService.Create(gameObject);                           // Google Play Games sign-in and achievement sync (no-op outside Android)
         }
 
         private void WireUi()
