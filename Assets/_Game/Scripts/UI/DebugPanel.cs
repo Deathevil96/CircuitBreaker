@@ -17,7 +17,7 @@ namespace CircuitBreaker.UI
     public class DebugPanel : MonoBehaviour
     {
         private GameUI _ui;
-        private GameObject _panel;
+        private GameObject _panel, _toggle;
         private Text _stats, _log;
         private float _nextRefresh, _fps;
         private readonly StringBuilder _sb = new StringBuilder();
@@ -30,7 +30,9 @@ namespace CircuitBreaker.UI
         public void Build(GameUI ui)
         {
             _ui = ui;
+            Promo.PromoDirector.Ensure();                       // preloads the icon and the store badge
             var toggle = UiKit.MakeButton(ui.SafeRoot, "DBG", ButtonStyle.Secondary, Toggle, null, 56, Theme.Micro + 2);
+            _toggle = toggle.border.gameObject;
             UiKit.Anchor((RectTransform)toggle.border.transform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(0, 0), new Vector2(90, 56));
 
             var card = UiKit.Card(ui.SafeRoot, Theme.A(Theme.Bg, 0.96f), Theme.Dim, 18f, raycast: true);
@@ -54,6 +56,18 @@ namespace CircuitBreaker.UI
             Section(col, "Board");
             Pair(col, "Auto-solve", () => GameManager.Instance.DebugAutoSolve(), "Force win", () => GameManager.Instance.DebugForceWin());
             Pair(col, "Force fail", () => GameManager.Instance.DebugForceFail(), "Copy info", CopyInfo);
+
+            Section(col, "Promo reels (record the screen, then tap one)");
+            for (int i = 0; i < Promo.PromoDirector.All.Length; i += 2)
+            {
+                var a = Promo.PromoDirector.All[i];
+                if (i + 1 < Promo.PromoDirector.All.Length)
+                {
+                    var b = Promo.PromoDirector.All[i + 1];
+                    Pair(col, a.label, () => PlayPromo(a.id), b.label, () => PlayPromo(b.id));
+                }
+                else Pair(col, a.label, () => PlayPromo(a.id), "Close", Toggle);
+            }
 
             Section(col, "Economy and ads");
             Pair(col, "+500 coins", () => GameManager.Instance.DebugAddCoins(500), "Reset save", () => GameManager.Instance.DebugResetSave());
@@ -81,6 +95,22 @@ namespace CircuitBreaker.UI
             UiKit.Size(ba.border, flexW: 1).preferredWidth = 0;
             var bb = UiKit.MakeButton(row, b, ButtonStyle.Secondary, actB, null, 70, Theme.Micro + 2);
             UiKit.Size(bb.border, flexW: 1).preferredWidth = 0;
+        }
+
+        /// <summary>Hides the whole debug UI, plays the reel, and brings the panel back when it is done.</summary>
+        private void PlayPromo(Promo.Scenario scene)
+        {
+            if (Promo.PromoDirector.Playing) return;
+            _panel.SetActive(false);
+            _toggle.SetActive(false);
+            _ui.DebugOpen = false;
+            Promo.PromoDirector.Ensure().Play(scene, () =>
+            {
+                _toggle.SetActive(true);
+                _panel.SetActive(true);
+                _ui.DebugOpen = true;
+                Refresh();
+            });
         }
 
         public void Toggle()

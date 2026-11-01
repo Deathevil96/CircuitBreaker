@@ -27,6 +27,12 @@
       },
       "url": "https://package.openupm.com"
     },
+    "com.google.external-dependency-manager": {
+      "version": "file:com.google.external-dependency-manager",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.unity.2d.animation": {
       "version": "13.0.5",
       "depth": 0,
