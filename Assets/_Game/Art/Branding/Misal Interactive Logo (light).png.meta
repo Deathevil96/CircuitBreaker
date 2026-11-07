@@ -1,0 +1,728 @@
+fileFormatVersion: 2
+guid: 2d3aab604b97d4c929377e720d71836c
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 1989812182405751813
+    second: Misal Interactive Logo (light)_0
+  - first:
+      213: 4961745725371575699
+    second: Misal Interactive Logo (light)_1
+  - first:
+      213: -4068439265098725787
+    second: Misal Interactive Logo (light)_2
+  - first:
+      213: 8181592481147996360
+    second: Misal Interactive Logo (light)_3
+  - first:
+      213: 5146938305363695722
+    second: Misal Interactive Logo (light)_4
+  - first:
+      213: -1057506092396993767
+    second: Misal Interactive Logo (light)_5
+  - first:
+      213: -4786263856686137022
+    second: Misal Interactive Logo (light)_6
+  - first:
+      213: -5336179245871179962
+    second: Misal Interactive Logo (light)_7
+  - first:
+      213: 5308995655339226819
+    second: Misal Interactive Logo (light)_8
+  - first:
+      213: 5150325645029790844
+    second: Misal Interactive Logo (light)_9
+  - first:
+      213: -8936608852114933942
+    second: Misal Interactive Logo (light)_10
+  - first:
+      213: -8962489542511943110
+    second: Misal Interactive Logo (light)_11
+  - first:
+      213: 8118011108681277952
+    second: Misal Interactive Logo (light)_12
+  - first:
+      213: -3414354821588329158
+    second: Misal Interactive Logo (light)_13
+  - first:
+      213: 6616122139418876032
+    second: Misal Interactive Logo (light)_14
+  - first:
+      213: -6589082679954357926
+    second: Misal Interactive Logo (light)_15
+  - first:
+      213: 4959252367223163662
+    second: Misal Interactive Logo (light)_16
+  - first:
+      213: 6665469815373867968
+    second: Misal Interactive Logo (light)_17
+  - first:
+      213: 7254193223204060760
+    second: Misal Interactive Logo (light)_18
+  - first:
+      213: 3079233729751688701
+    second: Misal Interactive Logo (light)_19
+  - first:
+      213: -3998603459618146842
+    second: Misal Interactive Logo (light)_20
+  - first:
+      213: -6955245793380513894
+    second: Misal Interactive Logo (light)_21
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_0
+      rect:
+        serializedVersion: 2
+        x: 690
+        y: 851
+        width: 507
+        height: 572
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5042a0e23ab3d9b10800000000000000
+      internalID: 1989812182405751813
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_1
+      rect:
+        serializedVersion: 2
+        x: 1100
+        y: 1298
+        width: 169
+        height: 181
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 39de592e279abd440800000000000000
+      internalID: 4961745725371575699
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_2
+      rect:
+        serializedVersion: 2
+        x: 1103
+        y: 1210
+        width: 253
+        height: 127
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5660a8d3b000a87c0800000000000000
+      internalID: -4068439265098725787
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_3
+      rect:
+        serializedVersion: 2
+        x: 1248
+        y: 1325
+        width: 80
+        height: 260
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8c845df730bda8170800000000000000
+      internalID: 8181592481147996360
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_4
+      rect:
+        serializedVersion: 2
+        x: 1019
+        y: 832
+        width: 162
+        height: 312
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a68dd0c7e199d6740800000000000000
+      internalID: 5146938305363695722
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_5
+      rect:
+        serializedVersion: 2
+        x: 1217
+        y: 851
+        width: 139
+        height: 406
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 913add6dfcbf251f0800000000000000
+      internalID: -1057506092396993767
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_6
+      rect:
+        serializedVersion: 2
+        x: 388
+        y: 570
+        width: 302
+        height: 186
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2418eec8166c39db0800000000000000
+      internalID: -4786263856686137022
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_7
+      rect:
+        serializedVersion: 2
+        x: 747
+        y: 570
+        width: 55
+        height: 186
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 64759088f3512f5b0800000000000000
+      internalID: -5336179245871179962
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_8
+      rect:
+        serializedVersion: 2
+        x: 856
+        y: 570
+        width: 246
+        height: 186
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3c636969b675da940800000000000000
+      internalID: 5308995655339226819
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_9
+      rect:
+        serializedVersion: 2
+        x: 1115
+        y: 570
+        width: 298
+        height: 186
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c74d595f2e1a97740800000000000000
+      internalID: 5150325645029790844
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_10
+      rect:
+        serializedVersion: 2
+        x: 1443
+        y: 570
+        width: 216
+        height: 186
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a47f311e899caf380800000000000000
+      internalID: -8936608852114933942
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_11
+      rect:
+        serializedVersion: 2
+        x: 484
+        y: 464
+        width: 9
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a322c631f37de9380800000000000000
+      internalID: -8962489542511943110
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_12
+      rect:
+        serializedVersion: 2
+        x: 569
+        y: 464
+        width: 37
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0026f9f9718f8a070800000000000000
+      internalID: 8118011108681277952
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_13
+      rect:
+        serializedVersion: 2
+        x: 680
+        y: 464
+        width: 37
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a3dd51a3166cd90d0800000000000000
+      internalID: -3414354821588329158
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_14
+      rect:
+        serializedVersion: 2
+        x: 790
+        y: 464
+        width: 32
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 088d8a6380031db50800000000000000
+      internalID: 6616122139418876032
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_15
+      rect:
+        serializedVersion: 2
+        x: 896
+        y: 464
+        width: 35
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a5144a98630ee84a0800000000000000
+      internalID: -6589082679954357926
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_16
+      rect:
+        serializedVersion: 2
+        x: 1002
+        y: 464
+        width: 41
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e0b0ad3b0cdc2d440800000000000000
+      internalID: 4959252367223163662
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_17
+      rect:
+        serializedVersion: 2
+        x: 1114
+        y: 463
+        width: 42
+        height: 49
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0cba27e5b71808c50800000000000000
+      internalID: 6665469815373867968
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_18
+      rect:
+        serializedVersion: 2
+        x: 1227
+        y: 464
+        width: 38
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 85ebf195d421ca460800000000000000
+      internalID: 7254193223204060760
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_19
+      rect:
+        serializedVersion: 2
+        x: 1338
+        y: 464
+        width: 9
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: df5204243c2abba20800000000000000
+      internalID: 3079233729751688701
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_20
+      rect:
+        serializedVersion: 2
+        x: 1419
+        y: 464
+        width: 42
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6e5ffc7c65b1288c0800000000000000
+      internalID: -3998603459618146842
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Misal Interactive Logo (light)_21
+      rect:
+        serializedVersion: 2
+        x: 1533
+        y: 464
+        width: 32
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a9746082dc00a7f90800000000000000
+      internalID: -6955245793380513894
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Misal Interactive Logo (light)_0: 1989812182405751813
+      Misal Interactive Logo (light)_1: 4961745725371575699
+      Misal Interactive Logo (light)_10: -8936608852114933942
+      Misal Interactive Logo (light)_11: -8962489542511943110
+      Misal Interactive Logo (light)_12: 8118011108681277952
+      Misal Interactive Logo (light)_13: -3414354821588329158
+      Misal Interactive Logo (light)_14: 6616122139418876032
+      Misal Interactive Logo (light)_15: -6589082679954357926
+      Misal Interactive Logo (light)_16: 4959252367223163662
+      Misal Interactive Logo (light)_17: 6665469815373867968
+      Misal Interactive Logo (light)_18: 7254193223204060760
+      Misal Interactive Logo (light)_19: 3079233729751688701
+      Misal Interactive Logo (light)_2: -4068439265098725787
+      Misal Interactive Logo (light)_20: -3998603459618146842
+      Misal Interactive Logo (light)_21: -6955245793380513894
+      Misal Interactive Logo (light)_3: 8181592481147996360
+      Misal Interactive Logo (light)_4: 5146938305363695722
+      Misal Interactive Logo (light)_5: -1057506092396993767
+      Misal Interactive Logo (light)_6: -4786263856686137022
+      Misal Interactive Logo (light)_7: -5336179245871179962
+      Misal Interactive Logo (light)_8: 5308995655339226819
+      Misal Interactive Logo (light)_9: 5150325645029790844
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

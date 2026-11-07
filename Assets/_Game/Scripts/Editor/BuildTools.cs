@@ -31,7 +31,9 @@ namespace CircuitBreaker.EditorTools
         private const string Alias = "arrowbreaker-upload";
         private const string DebugDefine = "CB_DEBUG";
         private const string BuildNumberFile = "ProjectSettings/BuildNumber.txt";
-        private const string LogoPath = "Assets/_Game/Art/Branding/MISAL Interactive Metallic Logo.png";
+        private const string LogoPath = "Assets/_Game/Art/Branding/Misal Interactive Logo (light).png";
+        private const string SplashBgPortrait = "Assets/_Game/Art/Branding/splash_bg_portrait.png";
+        private const string SplashBgLandscape = "Assets/_Game/Art/Branding/splash_bg_landscape.png";
 
         [Serializable] private class KeystoreData { public string path, alias, storePass, keyPass; }
 
@@ -170,25 +172,31 @@ namespace CircuitBreaker.EditorTools
 
         private static void ConfigureSplash(StringBuilder sb)
         {
-            var importer = AssetImporter.GetAtPath(LogoPath) as TextureImporter;
-            if (importer == null) { sb.AppendLine("  splash: logo not found at " + LogoPath + " (splash disabled)"); PlayerSettings.SplashScreen.show = false; return; }
-            if (importer.textureType != TextureImporterType.Sprite || importer.maxTextureSize != 2048)
+            foreach (var path in new[] { LogoPath, SplashBgPortrait, SplashBgLandscape })
             {
-                importer.textureType = TextureImporterType.Sprite;
-                importer.spriteImportMode = SpriteImportMode.Single;
-                importer.alphaIsTransparency = true;
-                importer.mipmapEnabled = false;
-                importer.maxTextureSize = 2048;
-                importer.SaveAndReimport();
+                var imp = AssetImporter.GetAtPath(path) as TextureImporter;
+                if (imp == null) continue;
+                if (imp.textureType != TextureImporterType.Sprite || imp.maxTextureSize != 2048)
+                {
+                    imp.textureType = TextureImporterType.Sprite;
+                    imp.spriteImportMode = SpriteImportMode.Single;
+                    imp.alphaIsTransparency = true;
+                    imp.mipmapEnabled = false;
+                    imp.maxTextureSize = 2048;
+                    imp.SaveAndReimport();
+                }
             }
             var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(LogoPath);
+            if (sprite == null) { sb.AppendLine("  splash: logo not found at " + LogoPath + " (splash disabled)"); PlayerSettings.SplashScreen.show = false; return; }
             PlayerSettings.SplashScreen.show = true;
             PlayerSettings.SplashScreen.showUnityLogo = false;
-            PlayerSettings.SplashScreen.logos = new[] { PlayerSettings.SplashScreenLogo.Create(2.5f, sprite) };
+            PlayerSettings.SplashScreen.logos = new[] { PlayerSettings.SplashScreenLogo.Create(2f, sprite) };      // 2 s is the shortest Unity allows
             PlayerSettings.SplashScreen.drawMode = PlayerSettings.SplashScreen.DrawMode.AllSequential;
-            PlayerSettings.SplashScreen.backgroundColor = Color.black;
+            PlayerSettings.SplashScreen.backgroundColor = new Color(0x15 / 255f, 0x10 / 255f, 0x3A / 255f, 1f);   // the gameplay background
+            PlayerSettings.SplashScreen.background = AssetDatabase.LoadAssetAtPath<Sprite>(SplashBgLandscape);
+            PlayerSettings.SplashScreen.backgroundPortrait = AssetDatabase.LoadAssetAtPath<Sprite>(SplashBgPortrait);
             PlayerSettings.SplashScreen.animationMode = PlayerSettings.SplashScreen.AnimationMode.Static;
-            sb.AppendLine("  splash: Misal Interactive logo, Unity logo off");
+            sb.AppendLine("  splash: Misal Interactive logo on the gameplay background, Unity logo off");
         }
 
         private static string SetDefine(string defines, string define, bool on)
