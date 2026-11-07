@@ -314,7 +314,7 @@ namespace CircuitBreaker.Promo
             {
                 bool show = i < _maxHp;
                 _hearts[i].gameObject.SetActive(show);
-                _hearts[i].color = i < _hp ? Red : new Color(1f, 1f, 1f, 0.18f);
+                _hearts[i].color = i < _hp ? Theme.Heart : Theme.A(Theme.Faint, 0.6f);   // same colours as the in-game hearts
                 if (lostOne && i == _hp) StartCoroutine(Pop(_hearts[i].rectTransform, 1.7f, 0.3f));
             }
         }
@@ -611,8 +611,7 @@ namespace CircuitBreaker.Promo
             _level = MakeText(_hud, 40, new Vector2(0, 40), new Vector2(1000, 60), bold: true);
             for (int i = 0; i < 5; i++)
             {
-                var h = UiKit.Img(_hud, Red, ProcSprites.Heart);
-                h.rectTransform.sizeDelta = new Vector2(62, 62);
+                var h = UiKit.Icon(_hud, "heart", 62, Theme.Heart);          // the very same heart icon the game HUD uses
                 h.rectTransform.anchoredPosition = new Vector2((i - 1) * 78f, -30f);
                 _hearts.Add(h);
             }
