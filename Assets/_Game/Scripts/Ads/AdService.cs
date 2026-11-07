@@ -58,7 +58,11 @@ namespace CircuitBreaker.Ads
         public static void ShowRewarded(string placement, Action<bool> onComplete)
         {
             if (!RewardedReady) { onComplete?.Invoke(false); return; }
-            Provider.ShowRewarded(placement, onComplete);
+            Provider.ShowRewarded(placement, ok =>
+            {
+                CircuitBreaker.Platform.Analytics.Log("ad_rewarded", ("placement", placement), ("completed", ok));
+                onComplete?.Invoke(ok);
+            });
         }
     }
 }

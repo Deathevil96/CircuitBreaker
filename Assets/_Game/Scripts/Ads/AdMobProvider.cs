@@ -47,6 +47,7 @@ namespace CircuitBreaker.Ads
         {
             if (_initialised) return;
             _initialised = true;
+            CircuitBreaker.Platform.Analytics.Enable();
             MobileAds.Initialize(_ =>
             {
                 Debug.Log("[CB] AdMob initialised");

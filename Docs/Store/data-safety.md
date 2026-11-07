@@ -1,4 +1,4 @@
-# Play Console: Data safety form (answers for the AdMob build)
+# Play Console: Data safety form (answers for the AdMob + Firebase Analytics build)
 
 These answers match the app as built. If you remove ads, or add analytics or purchases, update them. Google lists exactly what AdMob collects at https://developers.google.com/admob/android/privacy/play-data-disclosure, and that page wins if it differs.
 
@@ -15,6 +15,8 @@ These answers match the app as built. If you remove ads, or add analytics or pur
 | Approximate location (derived from IP) | Yes (by AdMob) | Yes (with Google) | Advertising or marketing, Analytics | No |
 | Device or other IDs (advertising ID) | Yes (by AdMob) | Yes (with Google) | Advertising or marketing | No |
 | App interactions (ad interactions) | Yes (by AdMob) | Yes (with Google) | Advertising or marketing, Analytics | No |
+| Device or other IDs (Firebase app-instance ID) | Yes (by Firebase Analytics) | Yes (with Google) | Analytics | No (off in EU/UK until consent) |
+| App interactions (levels played, hints, rewarded ads) | Yes (by Firebase Analytics) | Yes (with Google) | Analytics | No (off in EU/UK until consent) |
 | Crash logs / Diagnostics | Yes (by AdMob, Play vitals) | Yes (with Google) | Analytics, App functionality | No |
 | Personal info, financial info, health, messages, photos, audio, files, contacts, calendar | No | No | | |
 

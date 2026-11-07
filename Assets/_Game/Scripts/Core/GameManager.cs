@@ -750,6 +750,7 @@ namespace CircuitBreaker.Core
             var win = new WinData();
             win.rows.Add(new KeyValuePair<string, string>("Best combo", "x" + _bestCombo));
             win.rows.Add(new KeyValuePair<string, string>("Depth", Level.depth.ToString()));
+            Platform.Analytics.Log("level_win", ("level", LevelIndex), ("mode", Mode.ToString()), ("tier", diff.ToString()), ("hearts_lost", _heartsLost), ("bumps", _bumps));
             Log($"WIN {BoardKey}: bumps {_bumps}, best combo {_bestCombo}, perfect {perfect}");
 
             switch (Mode)
@@ -877,6 +878,7 @@ namespace CircuitBreaker.Core
             RunSave.ClearFamily(RunSave.FamilyOf(BoardKey));
             if (Mode == GameMode.Classic && !_debugForced && Economy.DifficultyOf(LevelIndex) == Difficulty.Nightmare)
                 _nightmareRetryAt = System.DateTime.UtcNow.AddSeconds(Economy.NightmareRetrySeconds);
+            Platform.Analytics.Log("level_fail", ("level", LevelIndex), ("mode", Mode.ToString()), ("tier", ((Difficulty)Level.difficulty).ToString()), ("bumps", _bumps));
             Log($"FAIL {BoardKey}: out of hearts after {_bumps} bumps (win streak reset)");
             ShowFailModal();
             SaveSystem.Save();
@@ -1028,6 +1030,7 @@ namespace CircuitBreaker.Core
                 return;
             }
             SaveSystem.TakeStock("hint");
+            Platform.Analytics.Log("hint_used", ("level", LevelIndex));
             SaveSystem.Save();
             var view = Board.ShowHint(out unlocks);
             if (view != null) Cam.FocusOn(view.CenterWorld);
