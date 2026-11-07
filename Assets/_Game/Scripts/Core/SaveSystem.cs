@@ -101,7 +101,12 @@ namespace CircuitBreaker.Core
         public static void ResetAll()
         {
             if (_sandboxKeys != null) { foreach (var k in _sandboxKeys) PlayerPrefs.DeleteKey(k); _sandboxKeys.Clear(); return; }
+            // Purchases are paid for: keep the ad-free flag and the record of granted transactions.
+            bool adsRemoved = AdsRemoved;
+            string seen = GetString("iapSeenTx");
             PlayerPrefs.DeleteAll();
+            if (adsRemoved) AdsRemoved = true;
+            if (seen.Length > 0) SetString("iapSeenTx", seen);
             PlayerPrefs.Save();
         }
 

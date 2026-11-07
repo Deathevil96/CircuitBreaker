@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using CircuitBreaker.Core;
 using CircuitBreaker.Fx;
 using CircuitBreaker.Generation;
+using CircuitBreaker.Platform;
 
 namespace CircuitBreaker.UI
 {
@@ -19,7 +20,7 @@ namespace CircuitBreaker.UI
 
     public partial class GameUI
     {
-        private GameObject _winSheet, _failSheet, _getMoreSheet, _confirmSheet, _freeplaySheet, _ovIntroSheet, _ovResultSheet;
+        private GameObject _winSheet, _failSheet, _getMoreSheet, _confirmSheet, _freeplaySheet, _ovIntroSheet, _ovResultSheet, _shopSheet;
         private RectTransform _winBody, _failBody, _getMoreBody, _confirmBody, _freeBody, _ovIntroBody, _ovResultBody;
         private Text _gmBodyText;
         private UiKit.UiButton _gmAd, _gmCoins;
@@ -76,6 +77,7 @@ namespace CircuitBreaker.UI
             _freeplaySheet = MakeSheet("Freeplay", out _freeBody);
             _ovIntroSheet = MakeSheet("OverloadIntro", out _ovIntroBody);
             _ovResultSheet = MakeSheet("OverloadResult", out _ovResultBody);
+            _shopSheet = MakeSheet("Shop", out _shopBody);
         }
 
         private void SheetTitle(Transform body, string title, string subtitle = null)
@@ -101,13 +103,19 @@ namespace CircuitBreaker.UI
 
         public void HideSheets()
         {
-            foreach (var s in new[] { _winSheet, _failSheet, _getMoreSheet, _confirmSheet, _freeplaySheet, _ovIntroSheet, _ovResultSheet })
+            foreach (var s in new[] { _winSheet, _failSheet, _getMoreSheet, _confirmSheet, _freeplaySheet, _ovIntroSheet, _ovResultSheet, _shopSheet })
                 if (s != null) SetLayer(s, false);
         }
 
         // =====================================================================
         // Win
         // =====================================================================
+        /// <summary>"Well done" pop-in and confetti from both screen edges, drawn above everything.</summary>
+        public void Celebrate(string message = "Well done")
+        {
+            Celebration.Play(_canvasRect, message);
+        }
+
         public void ShowWin(WinData d)
         {
             ClearChildren(_winBody);
@@ -194,6 +202,8 @@ namespace CircuitBreaker.UI
             ad.SetEnabled(adEnabled);
             var refill = UiKit.MakeButton(_failBody, "Refill hearts  ·  " + refillCost + " coins", ButtonStyle.Secondary, () => RefillClicked?.Invoke(), "coin", 100);
             refill.SetEnabled(coins >= refillCost);
+            if (coins < refillCost && IapService.ShopVisible)
+                UiKit.MakeButton(_failBody, "Get coins", ButtonStyle.Secondary, () => ShowShop(), "coin", 90);
             UiKit.MakeButton(_failBody, "Restart level", ButtonStyle.Ghost, () => FailRestartClicked?.Invoke(), null, 80);
             SetLayer(_failSheet, true);
         }
@@ -201,6 +211,37 @@ namespace CircuitBreaker.UI
         // =====================================================================
         // Get more (rewarded ad / coins)
         // =====================================================================
+        // =====================================================================
+        // Coin shop (hidden in the EEA, UK and Switzerland)
+        // =====================================================================
+        private RectTransform _shopBody;
+        public bool FailOpen => _failSheet != null && _failSheet.activeSelf;
+        public bool ShopOpen => _shopSheet != null && _shopSheet.activeSelf;
+
+        public void ShowShop()
+        {
+            if (!IapService.ShopVisible) { Toast("Purchases are not available in your region."); return; }
+            ClearChildren(_shopBody);
+            SheetTitle(_shopBody, "Coin shop", "Coins pay for hints, rulers, extracts and continues.");
+            foreach (var pack in IapService.Packs)
+            {
+                var p = pack;
+                UiKit.MakeButton(_shopBody, p.coins + " coins  ·  " + IapService.PriceOf(p.id, p.fallbackPrice), ButtonStyle.Primary, () => IapService.Buy(p.id), "coin", 100);
+            }
+            if (!SaveSystem.AdsRemoved)
+                UiKit.MakeButton(_shopBody, "Remove ads  ·  " + IapService.PriceOf(IapService.RemoveAdsId, "$2.99"), ButtonStyle.Secondary, () => IapService.Buy(IapService.RemoveAdsId), "ad", 100);
+            else
+                UiKit.Label(_shopBody, "Ads removed. Thank you!", Theme.Body - 3, Theme.Dim, TextAnchor.MiddleCenter);
+            UiKit.MakeButton(_shopBody, "Restore purchases", ButtonStyle.Ghost, () => IapService.Restore(), null, 80);
+            var fine = UiKit.Label(_shopBody,
+                "Coins are non-refundable once spent. A purchase can be refunded within 48 hours if its coins are unused. Remove ads hides banner and full-screen ads; optional rewarded ads stay.",
+                Theme.Micro, Theme.Faint, TextAnchor.MiddleCenter, wrap: true);
+            UiKit.Size(fine, minH: 90);
+            UiKit.MakeButton(_shopBody, "Terms and Conditions", ButtonStyle.Ghost, () => Application.OpenURL(AppLinks.TermsUrl), null, 72);
+            UiKit.MakeButton(_shopBody, "Close", ButtonStyle.Ghost, () => SetLayer(_shopSheet, false), null, 80);
+            SetLayer(_shopSheet, true);
+        }
+
         public bool GetMoreOpen => _getMoreSheet != null && _getMoreSheet.activeSelf;
 
         public void ShowGetMore(string title, string body, string adLabel, bool adEnabled, string coinLabel, bool coinEnabled)
@@ -395,6 +436,117 @@ namespace CircuitBreaker.UI
             else y = Mathf.Lerp(-24f, 200f, Mathf.Clamp01((_toastT - 3.6f) / 0.35f));
             _toastRect.anchoredPosition = new Vector2(0, y);
             if (_toastT >= 3.95f) { _toastT = -1f; _toastRect.gameObject.SetActive(false); }
+        }
+    }
+
+    /// <summary>
+    /// Level-complete celebration on the top of the UI: a "Well done" pop-in and confetti bursting in from both
+    /// sides of the screen. Purely visual, never blocks input, destroys itself when finished.
+    /// </summary>
+    public class Celebration : MonoBehaviour
+    {
+        private const float Duration = 2.4f;
+        private const int PiecesPerSide = 34;
+        private const float Gravity = 2600f;   // canvas units / s^2
+
+        private struct Piece
+        {
+            public RectTransform rt;
+            public Image img;
+            public Vector2 pos, vel;
+            public float spin, angle, flip, flipSpeed, life, drag;
+        }
+
+        private Piece[] _pieces;
+        private RectTransform _label;
+        private Text _text;
+        private float _t;
+        private Vector2 _size;
+
+        public static void Play(RectTransform canvas, string message)
+        {
+            var root = UiKit.Rect("Celebration", canvas);
+            UiKit.Stretch(root);
+            root.SetAsLastSibling();
+            root.gameObject.AddComponent<Celebration>().Init(root, message);
+        }
+
+        private void Init(RectTransform root, string message)
+        {
+            _size = root.rect.size;
+            if (_size.x <= 0 || _size.y <= 0) _size = new Vector2(1080, 1920);
+
+            // confetti first so the message sits above it
+            _pieces = new Piece[PiecesPerSide * 2];
+            for (int i = 0; i < _pieces.Length; i++)
+            {
+                bool left = i < PiecesPerSide;
+                var img = UiKit.Img(root, CyberTheme.Arrow(UnityEngine.Random.Range(0, 8)), ProcSprites.Pixel);
+                img.raycastTarget = false;
+                var rt = img.rectTransform;
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.sizeDelta = UnityEngine.Random.value < 0.3f ? new Vector2(16, 16) : new Vector2(UnityEngine.Random.Range(12f, 16f), UnityEngine.Random.Range(26f, 36f));
+
+                float ang = UnityEngine.Random.Range(52f, 78f) * Mathf.Deg2Rad;
+                float speed = UnityEngine.Random.Range(1500f, 2500f);
+                var start = new Vector2(left ? -_size.x * 0.5f - 10f : _size.x * 0.5f + 10f, -_size.y * UnityEngine.Random.Range(0.02f, 0.18f));
+                var vel = new Vector2(Mathf.Cos(ang) * speed * (left ? 1f : -1f), Mathf.Sin(ang) * speed);
+                _pieces[i] = new Piece
+                {
+                    rt = rt, img = img, pos = start, vel = vel,
+                    spin = UnityEngine.Random.Range(-540f, 540f), angle = UnityEngine.Random.Range(0f, 360f),
+                    flip = UnityEngine.Random.Range(0f, 6.28f), flipSpeed = UnityEngine.Random.Range(8f, 16f),
+                    life = UnityEngine.Random.Range(1.7f, Duration), drag = UnityEngine.Random.Range(1.4f, 2.2f),
+                };
+                rt.anchoredPosition = start;
+            }
+
+            _text = UiKit.Label(root, message, Theme.TitleSize + 34, Theme.Text, TextAnchor.MiddleCenter, bold: true);
+            _text.raycastTarget = false;
+            _text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            _label = _text.rectTransform;
+            _label.anchorMin = _label.anchorMax = _label.pivot = new Vector2(0.5f, 0.5f);
+            _label.sizeDelta = new Vector2(1000, 160);
+            _label.anchoredPosition = new Vector2(0, _size.y * 0.26f);
+            var glow = _text.gameObject.AddComponent<Outline>();
+            glow.effectColor = Theme.A(Theme.Accent, 0.55f);
+            glow.effectDistance = new Vector2(3, -3);
+            _label.localScale = Vector3.zero;
+        }
+
+        private void Update()
+        {
+            float dt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);
+            _t += dt;
+
+            for (int i = 0; i < _pieces.Length; i++)
+            {
+                ref var p = ref _pieces[i];
+                if (p.rt == null) continue;
+                p.vel *= Mathf.Exp(-p.drag * dt);
+                p.vel.y -= Gravity * dt * 0.5f;
+                p.pos += p.vel * dt;
+                p.angle += p.spin * dt;
+                p.flip += p.flipSpeed * dt;
+                p.rt.anchoredPosition = p.pos + new Vector2(Mathf.Sin(p.flip * 0.5f) * 14f, 0f);
+                p.rt.localRotation = Quaternion.Euler(0, 0, p.angle);
+                p.rt.localScale = new Vector3(Mathf.Cos(p.flip), 1f, 1f);
+                var c = p.img.color;
+                c.a = Mathf.Clamp01((p.life - _t) / 0.4f);
+                p.img.color = c;
+            }
+
+            // message: pop in with overshoot, hold, then drift up and fade
+            float s;
+            if (_t < 0.18f) s = Mathf.Lerp(0f, 1.12f, _t / 0.18f);
+            else if (_t < 0.3f) s = Mathf.Lerp(1.12f, 1f, (_t - 0.18f) / 0.12f);
+            else s = 1f;
+            _label.localScale = new Vector3(s, s, 1f);
+            float fade = Mathf.Clamp01((_t - 1.25f) / 0.45f);
+            var tc = _text.color; tc.a = 1f - fade; _text.color = tc;
+            _label.anchoredPosition = new Vector2(0, _size.y * 0.26f + fade * 60f);
+
+            if (_t >= Duration) Destroy(gameObject);
         }
     }
 }

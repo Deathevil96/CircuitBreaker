@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using CircuitBreaker.Core;
@@ -7,7 +8,7 @@ using CircuitBreaker.Fx;
 
 namespace CircuitBreaker.Gameplay
 {
-    public enum TapResult { None, Escaped, Blocked, Frozen, Extracted, Busy }
+    public enum TapResult { None, Escaped, Blocked, Queued, Frozen, Extracted, Busy }
 
     /// <summary>Owns the visual board (PCB backdrop, pads, arrows) and applies tap rules to the Board model.</summary>
     public class BoardView : MonoBehaviour
@@ -70,6 +71,7 @@ namespace CircuitBreaker.Gameplay
         public void Clear()
         {
             _views.Clear();
+            CancelQueue();
             if (_root != null)
             {
                 _root.gameObject.SetActive(false);      // gone immediately; Destroy only takes effect at the end of the frame
@@ -278,8 +280,64 @@ namespace CircuitBreaker.Gameplay
                 if (blocker != null) blocker.Flash(CyberTheme.BlockedFlash, 0.35f);
                 Sfx.Thud();
             });
+
+            // The tap is remembered: once the arrows in front are gone this one leaves on its own.
+            // The first blocked tap still counts as a mistake; tapping it again while it waits does not.
+            bool alreadyWaiting = !_queued.Add(id);
+            view.SetQueued(true);
+            if (alreadyWaiting) return TapResult.Queued;
             Collided?.Invoke(def);
             return TapResult.Blocked;
+        }
+
+        // ---------- remembered taps ----------
+        private readonly HashSet<int> _queued = new HashSet<int>();
+        private Coroutine _queueRoutine;
+        public int QueuedCount => _queued.Count;
+
+        /// <summary>Forget every waiting arrow (level over, restart, out of hearts).</summary>
+        public void CancelQueue()
+        {
+            if (_queueRoutine != null) { StopCoroutine(_queueRoutine); _queueRoutine = null; }
+            foreach (int id in _queued) { var v = ViewOf(id); if (v != null) v.SetQueued(false); }
+            _queued.Clear();
+        }
+
+        private void StartQueueCheck()
+        {
+            if (_queued.Count > 0 && _queueRoutine == null) _queueRoutine = StartCoroutine(QueueRoutine());
+        }
+
+        private IEnumerator QueueRoutine()
+        {
+            yield return new WaitForSeconds(0.14f);
+            int waits = 0;
+            while (_queued.Count > 0 && waits < 40)
+            {
+                int next = -1; bool busy = false;
+                foreach (int qid in _queued)
+                {
+                    if (!Model.Arrows.TryGetValue(qid, out var d)) continue;
+                    if (Model.IsInert(qid) || !Model.RayClear(d)) continue;
+                    if (!_views.TryGetValue(qid, out var v) || v == null || v.IsBusy) { busy = true; continue; }
+                    next = qid; break;
+                }
+                if (next >= 0)
+                {
+                    waits = 0;
+                    var view = _views[next];
+                    _queued.Remove(next);
+                    view.SetQueued(false);
+                    Release(next, view, extract: false);        // counts as a normal escape (combo, win check, save)
+                    yield return new WaitForSeconds(0.14f);
+                    continue;
+                }
+                if (!busy) break;
+                waits++;
+                yield return new WaitForSeconds(0.1f);
+            }
+            _queued.RemoveWhere(q => !Model.Arrows.ContainsKey(q));
+            _queueRoutine = null;
         }
 
         public void Extract(int id)
@@ -292,6 +350,7 @@ namespace CircuitBreaker.Gameplay
         {
             var def = Model.Arrows[id];
             var changed = Model.Remove(id);
+            _queued.Remove(id);
             RemovedOrder.Add(id);
             foreach (int cid in changed)
             {
@@ -307,6 +366,7 @@ namespace CircuitBreaker.Gameplay
             else Escaped?.Invoke(def, Model.Remaining);
             Changed?.Invoke();
             if (RulerActive) RebuildRuler();
+            StartQueueCheck();
         }
 
         // ---------- hint / ruler ----------

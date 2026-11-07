@@ -211,6 +211,27 @@ namespace CircuitBreaker.Gameplay
             _colorRoutine = null;
         }
 
+        /// <summary>A blocked arrow the player has tapped: it breathes softly until its path clears and it leaves by itself.</summary>
+        public void SetQueued(bool on)
+        {
+            if (_queueRoutine != null) { StopCoroutine(_queueRoutine); _queueRoutine = null; }
+            if (on && !_gone) _queueRoutine = StartCoroutine(QueuedRoutine());
+            else if (!_gone && _colorRoutine == null) Paint(_baseColor);
+        }
+
+        private Coroutine _queueRoutine;
+
+        private IEnumerator QueuedRoutine()
+        {
+            float t = 0f;
+            while (!_gone)
+            {
+                t += Time.deltaTime;
+                if (_colorRoutine == null) Paint(Color.Lerp(_baseColor, Color.white, 0.18f + 0.22f * (0.5f + 0.5f * Mathf.Sin(t * 5f))));
+                yield return null;
+            }
+        }
+
         public void Hint(float seconds = 2.4f)
         {
             if (_gone) return;

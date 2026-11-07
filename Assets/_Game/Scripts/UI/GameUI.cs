@@ -147,11 +147,17 @@ namespace CircuitBreaker.UI
             go.SetActive(on);
             _stack.Remove(go);
             if (on) { _open.Add(go); _stack.Add(go); }
-            else _open.Remove(go);
+            else { if (_open.Remove(go)) _lastLayerClose = Time.unscaledTime; }
         }
+
+        // A button press that closes a sheet must not also count as a tap on the board underneath it
+        // (it used to cost a heart right after an ad continue or a coin refill).
+        private float _lastLayerClose = -10f;
+        private const float TapShield = 0.3f;
 
         public void HideAllOverlays()
         {
+            if (_open.Count > 0) _lastLayerClose = Time.unscaledTime;
             foreach (var go in new List<GameObject>(_open)) if (go != null) go.SetActive(false);
             _open.Clear();
             _stack.Clear();
@@ -176,7 +182,7 @@ namespace CircuitBreaker.UI
         /// <summary>Only taps inside the play area reach the board.</summary>
         public bool PointerInPlayArea(Vector2 screen)
         {
-            if (ModalOpen) return false;
+            if (ModalOpen || Time.unscaledTime - _lastLayerClose < TapShield) return false;
             float fy = screen.y / Mathf.Max(1, Screen.height);
             return fy > CameraController.BottomSafe && fy < 1f - CameraController.TopSafe;
         }

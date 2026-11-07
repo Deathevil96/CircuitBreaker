@@ -58,7 +58,9 @@ namespace CircuitBreaker.Core
         private bool _outcomeShown;           // the win/fail screen for this board has been handled
 
         // session-wide ad pacing (reset every app launch)
-        private int _continueAdsUsed;
+        private int _continueAdsUsed;                  // per app launch (easy tiers)
+        private int _attemptAdsUsed;                    // per board attempt (Super/Ultra Hard)
+        private System.DateTime _nightmareRetryAt;
         private int _restartsThisSession, _restartAdTarget;
         private bool _restartAdShown;
         private string _getMoreId;
@@ -90,6 +92,33 @@ namespace CircuitBreaker.Core
         // =====================================================================
         // Startup
         // =====================================================================
+#if CB_QA
+        /// <summary>QA builds only: reads qa.txt from the app's files folder (lines like level=30, coins=500), applies it once and deletes it.</summary>
+        private static void ApplyQaFile()
+        {
+            try
+            {
+                string path = System.IO.Path.Combine(Application.persistentDataPath, "qa.txt");
+                if (!System.IO.File.Exists(path)) return;
+                foreach (var raw in System.IO.File.ReadAllLines(path))
+                {
+                    var kv = raw.Trim().Split('=');
+                    if (kv.Length != 2 || !int.TryParse(kv[1].Trim(), out int v)) continue;
+                    switch (kv[0].Trim().ToLowerInvariant())
+                    {
+                        case "level": SaveSystem.Progress = v; break;
+                        case "coins": SaveSystem.Coins = v; break;
+                        case "adsremoved": SaveSystem.AdsRemoved = v == 1; break;
+                    }
+                }
+                System.IO.File.Delete(path);
+                SaveSystem.Save();
+                Debug.Log("[QA] applied qa.txt: progress " + SaveSystem.Progress + ", coins " + SaveSystem.Coins);
+            }
+            catch (System.Exception e) { Debug.LogWarning("[QA] qa.txt failed: " + e.Message); }
+        }
+#endif
+
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -100,6 +129,9 @@ namespace CircuitBreaker.Core
 
             string migration = SaveSystem.Migrate();
             if (migration != null) Log(migration);
+#if CB_QA
+            ApplyQaFile();
+#endif
 #if CB_ADMOB && !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IOS)
             AdService.Init(gameObject.AddComponent<AdMobProvider>());    // real AdMob (test ad units until production IDs are set)
 #elif UNITY_EDITOR || DEVELOPMENT_BUILD || CB_TEST_ADS
@@ -107,6 +139,9 @@ namespace CircuitBreaker.Core
 #else
             AdService.Init(null);                                         // no SDK wired: no ads, and no ad rewards are granted
 #endif
+            IapService.Changed += () => { if (UI == null) return; UI.SetCoins(SaveSystem.Coins); if (UI.ShopOpen) UI.ShowShop(); if (UI.FailOpen) ShowFailModal(); };
+            IapService.Notice += msg => { if (UI != null) UI.Toast(msg, 3f); };
+            IapService.Init();
             _restartAdTarget = UnityEngine.Random.Range(2, 4);            // the restart ad appears on the 2nd or 3rd reset
 
             SetupCamera();
@@ -421,6 +456,7 @@ namespace CircuitBreaker.Core
 
             _maxHearts = Level.hearts > 0 ? Level.hearts : 3;
             Hearts = _maxHearts;
+            _attemptAdsUsed = 0;
             _combo = 0; _bestCombo = 0; _heartsLost = 0;
             InputLocked = false;
             Cam.InputEnabled = true;
@@ -578,6 +614,15 @@ namespace CircuitBreaker.Core
 
         private void OnFailRestart()
         {
+            if (Mode == GameMode.Classic && !_debugForced && Economy.DifficultyOf(LevelIndex) == Difficulty.Nightmare)
+            {
+                double wait = (_nightmareRetryAt - System.DateTime.UtcNow).TotalSeconds;
+                if (wait > 0)
+                {
+                    UI.Toast("Free retry in " + Mathf.CeilToInt((float)wait / 60f) + " min. Or continue with coins.", 3f);
+                    return;
+                }
+            }
             UI.HideSheets();
             RestartBoard(countAttempt: false);       // the failure already counted as an attempt
         }
@@ -623,6 +668,11 @@ namespace CircuitBreaker.Core
             _tapCount++;
             Log($"TAP #{_tapCount} -> {result}");
             if (result == TapResult.None) { UI.HoldBanner(""); RefreshBoosters(); }
+            if (result == TapResult.Blocked && !SaveSystem.GiftGiven("queueTip"))
+            {
+                SaveSystem.SetGiftGiven("queueTip");
+                UI.Toast("Blocked arrows wait. They leave on their own once the way is clear.", 4f);
+            }
         }
 
         private void OnEscaped(ArrowDef arrow, int remaining)
@@ -683,6 +733,7 @@ namespace CircuitBreaker.Core
             InputLocked = true;
             _finished = true;
             int token = _levelToken;
+            UI.Celebrate();
             yield return new WaitForSeconds(0.75f);
             if (token != _levelToken) yield break;
             FinishWin();
@@ -806,6 +857,7 @@ namespace CircuitBreaker.Core
         // =====================================================================
         private IEnumerator FailRoutine()
         {
+            Board.CancelQueue();
             InputLocked = true;
             _finished = true;
             int token = _levelToken;
@@ -819,11 +871,14 @@ namespace CircuitBreaker.Core
         {
             if (_outcomeShown) return;
             _outcomeShown = true;
+            Board.CancelQueue();
             InputLocked = true;
             _finished = true;
             Stats.RegisterLoss();
             if (Mode == GameMode.Classic && !_replay && !_debugForced) Stats.AddAttempt(LevelIndex);
             RunSave.ClearFamily(RunSave.FamilyOf(BoardKey));
+            if (Mode == GameMode.Classic && !_debugForced && Economy.DifficultyOf(LevelIndex) == Difficulty.Nightmare)
+                _nightmareRetryAt = System.DateTime.UtcNow.AddSeconds(Economy.NightmareRetrySeconds);
             Log($"FAIL {BoardKey}: out of hearts after {_bumps} bumps (win streak reset)");
             ShowFailModal();
             SaveSystem.Save();
@@ -833,28 +888,38 @@ namespace CircuitBreaker.Core
         {
             string label;
             bool enabled;
-            if (_continueAdsUsed >= Economy.ContinueAdsPerSession) { label = "Ad used this session"; enabled = false; }
+            bool classic = Mode == GameMode.Classic && !_debugForced;
+            if (classic && !Economy.AdContinueAllowed(LevelIndex)) { label = "No ads on Nightmare"; enabled = false; }
+            else if (AdContinueUsedUp(classic)) { label = classic && Economy.AdContinuePerAttempt(LevelIndex) ? "Ad used on this try" : "Ad used this session"; enabled = false; }
             else if (!AdService.RewardedReady) { label = "Ad unavailable"; enabled = false; }
-            else { label = "Watch ad  ·  +1 heart"; enabled = true; }
-            UI.ShowFail(SaveSystem.Coins, Economy.RefillCost, label, enabled);
+            else { label = classic && Economy.AdContinuePerAttempt(LevelIndex) ? "Watch ad  ·  +1 heart  ·  +1 hint" : "Watch ad  ·  +1 heart"; enabled = true; }
+            UI.ShowFail(SaveSystem.Coins, RefillCostNow(), label, enabled);
         }
+
+        private bool AdContinueUsedUp(bool classic) =>
+            classic && Economy.AdContinuePerAttempt(LevelIndex) ? _attemptAdsUsed >= 1 : _continueAdsUsed >= Economy.ContinueAdsPerSession;
+
+        private int RefillCostNow() => Mode == GameMode.Classic && !_debugForced ? Economy.RefillCostFor(LevelIndex) : Economy.RefillCost;
 
         private void ContinueWithAd()
         {
-            if (_continueAdsUsed >= Economy.ContinueAdsPerSession || !AdService.RewardedReady) { ShowFailModal(); return; }
+            bool classic = Mode == GameMode.Classic && !_debugForced;
+            if ((classic && !Economy.AdContinueAllowed(LevelIndex)) || AdContinueUsedUp(classic) || !AdService.RewardedReady) { ShowFailModal(); return; }
             AdService.ShowRewarded("continue_heart", ok =>
             {
                 if (!ok) { UI.Toast("Ad not completed. No reward."); ShowFailModal(); return; }
-                _continueAdsUsed++;
+                _continueAdsUsed++; _attemptAdsUsed++;
                 Log("AD REWARD: +1 heart (continue), used this session " + _continueAdsUsed);
+                if (classic && Economy.AdContinuePerAttempt(LevelIndex)) { SaveSystem.AddStock("hint", 1, Economy.HintCap + Economy.PurchaseOverCap); RefreshBoosters(); }
                 GrantHearts(1);
             });
         }
 
         private void RefillHearts()
         {
-            if (SaveSystem.Coins < Economy.RefillCost) return;
-            SaveSystem.Coins -= Economy.RefillCost;
+            int cost = RefillCostNow();
+            if (SaveSystem.Coins < cost) return;
+            SaveSystem.Coins -= cost;
             SaveSystem.Save();
             UI.SetCoins(SaveSystem.Coins);
             GrantHearts(_maxHearts);
