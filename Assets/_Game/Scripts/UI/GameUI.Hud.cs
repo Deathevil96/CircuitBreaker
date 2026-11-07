@@ -284,9 +284,9 @@ namespace CircuitBreaker.UI
         {
             if (_loading == null)
             {
-                var root = UiKit.Rect("Loading", _safe);
+                var root = UiKit.Rect("Loading", _safe.parent);        // full canvas, so it also covers the notch and navigation bar areas
                 UiKit.Stretch(root);
-                UiKit.Img(root, Theme.Bg, null, true);                       // opaque and swallows touches
+                UiKit.Stretch(UiKit.Img(root, Theme.Bg, null, true).rectTransform);   // opaque, covers the whole screen, swallows touches
 
                 var title = UiKit.Label(root, "ARROW", Theme.TitleSize, Theme.Text, TextAnchor.MiddleCenter, true);
                 UiKit.Anchor(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 150), new Vector2(900, 90));
@@ -295,11 +295,11 @@ namespace CircuitBreaker.UI
 
                 var track = UiKit.Rect("Track", root);
                 UiKit.Anchor(track, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -40), new Vector2(460, 14));
-                UiKit.Img(track, Theme.Surface2, null, false);
+                UiKit.Stretch(UiKit.Img(track, Theme.Surface2, null, false).rectTransform);
                 var mask = track.gameObject.AddComponent<RectMask2D>();
                 _loadingBar = UiKit.Rect("Bar", track);
                 UiKit.Anchor(_loadingBar, new Vector2(0, 0), new Vector2(0, 1), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(150, 0));
-                UiKit.Img(_loadingBar, Theme.Accent, null, false);
+                UiKit.Stretch(UiKit.Img(_loadingBar, Theme.Accent, null, false).rectTransform);
 
                 _loadingText = UiKit.Label(root, "", Theme.Body, Theme.Dim, TextAnchor.MiddleCenter);
                 UiKit.Anchor(_loadingText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -110), new Vector2(900, 60));
