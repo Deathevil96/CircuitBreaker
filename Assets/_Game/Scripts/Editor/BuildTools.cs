@@ -56,6 +56,17 @@ namespace CircuitBreaker.EditorTools
         [MenuItem("CircuitBreaker/Android/3. Build Release AAB (AdMob production IDs)")]
         public static void BuildReleaseAdMob() => Build(AdMode.AdMobProduction, bundle: true, debug: false);
 
+        private static bool _qa;
+        private const string QaDefine = "CB_QA";
+
+        [MenuItem("CircuitBreaker/Android/6. Build QA APK (test ads, level and coin jump file)")]
+        public static void BuildQaApk()
+        {
+            _qa = true;
+            try { Build(AdMode.TestStub, bundle: false, debug: false); }
+            finally { _qa = false; }
+        }
+
         [MenuItem("CircuitBreaker/Android/5. Build Release APK (no ads, install on a phone)")]
         public static void BuildReleaseApk() => Build(AdMode.None, bundle: false, debug: false);
 
@@ -101,6 +112,7 @@ namespace CircuitBreaker.EditorTools
             defines = SetDefine(defines, AdMobDefine, ads == AdMode.AdMobTest || ads == AdMode.AdMobProduction);
             defines = SetDefine(defines, AdMobProdDefine, ads == AdMode.AdMobProduction);
             defines = SetDefine(defines, DebugDefine, debug);
+            defines = SetDefine(defines, QaDefine, _qa);
             PlayerSettings.SetScriptingDefineSymbols(t, defines);
 
             EditorUserBuildSettings.buildAppBundle = true;
@@ -309,8 +321,8 @@ namespace CircuitBreaker.EditorTools
         }
 
         /// <summary>
-        /// Launcher icon: one bold bent arrow (the game's signature shape) in a cyan-to-magenta gradient with a soft glow,
-        /// on a near-black tile. `foreground` alone is used for the adaptive icon layer; the mark stays inside the central 60%.
+        /// Launcher icon: three nested bent arrows (the game's signature shape), heads lined up on the right, shifting from cyan to
+        /// magenta with a soft glow, on a near-black tile. `foreground` alone is the adaptive icon layer; the mark stays inside the central 60%.
         /// </summary>
         private static Texture2D RenderIcon(int size, bool withBackground, bool foreground)
         {
@@ -318,14 +330,14 @@ namespace CircuitBreaker.EditorTools
             var px = new Color[size * size];
             var cyan = new Color(0.00f, 0.92f, 1.00f, 1f);
             var magenta = new Color(1.00f, 0.20f, 0.62f, 1f);
-            var edge = new Color(0.039f, 0.039f, 0.047f, 1f);
-            var centre = new Color(0.085f, 0.09f, 0.115f, 1f);
+            var edge = new Color(0.065f, 0.045f, 0.200f, 1f);
+            var centre = new Color(0.190f, 0.130f, 0.470f, 1f);
 
-            // shaft: up, then right; head: triangle pointing right
-            Vector2 p0 = new Vector2(0.27f, 0.27f), p1 = new Vector2(0.27f, 0.55f), p2 = new Vector2(0.58f, 0.55f);
-            Vector2 ha = new Vector2(0.58f, 0.74f), hb = new Vector2(0.58f, 0.36f), hc = new Vector2(0.82f, 0.55f);
-            float half = 0.038f;
-            float len1 = (p1 - p0).magnitude, len2 = (p2 - p1).magnitude, total = len1 + len2;
+            // Each arrow: up from the tail, then right to a triangular head. Outer arrow is cyan, inner is magenta.
+            const int n = 3;
+            float[] tailX = { 0.24f, 0.345f, 0.45f };
+            float[] turnY = { 0.705f, 0.585f, 0.465f };
+            const float tailY = 0.25f, headX = 0.655f, tipX = 0.75f, headHalf = 0.060f, half = 0.026f;
 
             for (int y = 0; y < size; y++)
                 for (int x = 0; x < size; x++)
@@ -335,21 +347,31 @@ namespace CircuitBreaker.EditorTools
                     Color c = withBackground ? Color.Lerp(centre, edge, Mathf.Clamp01(Vector2.Distance(p, new Vector2(0.5f, 0.52f)) * 1.5f)) : new Color(0, 0, 0, 0);
                     if (foreground)
                     {
-                        // distance to the shaft polyline, with where along it we are (for the gradient)
-                        float d1 = SegDist(p, p0, p1, out float t1), d2 = SegDist(p, p1, p2, out float t2);
-                        float dShaft = Mathf.Min(d1, d2);
-                        float along = d1 <= d2 ? t1 * len1 : len1 + t2 * len2;
-                        // distance to the head triangle (negative inside)
-                        float dHead = TriDist(p, ha, hb, hc);
-                        float d = Mathf.Min(dShaft - half, dHead);
-                        float t = dHead < dShaft - half ? 1f : Mathf.Clamp01(along / total * 0.85f);
+                        float best = 9f; int bestI = 0; float bestT = 0f;
+                        for (int i = 0; i < n; i++)
+                        {
+                            var a = new Vector2(tailX[i], tailY); var b = new Vector2(tailX[i], turnY[i]); var e = new Vector2(headX, turnY[i]);
+                            float len1 = (b - a).magnitude, len2 = (e - b).magnitude;
+                            float d1 = SegDist(p, a, b, out float t1), d2 = SegDist(p, b, e, out float t2);
+                            float dShaft = Mathf.Min(d1, d2) - half;
+                            float along = d1 <= d2 ? t1 * len1 : len1 + t2 * len2;
+                            float dHead = TriDist(p, new Vector2(headX, turnY[i] + headHalf), new Vector2(headX, turnY[i] - headHalf), new Vector2(tipX, turnY[i]));
+                            float d = Mathf.Min(dShaft, dHead);
+                            if (d < best)
+                            {
+                                best = d; bestI = i;
+                                bestT = dHead < dShaft ? 1f : Mathf.Clamp01(along / (len1 + len2));
+                            }
+                        }
+                        // colour steps across the three arrows and drifts along each one
+                        float t = Mathf.Clamp01(bestI / (float)(n - 1) * 0.72f + bestT * 0.28f);
                         var lineC = Color.Lerp(cyan, magenta, t);
-                        float core = Mathf.Clamp01(0.5f - d / 0.006f);
-                        float glow = Mathf.Exp(-Mathf.Pow(Mathf.Max(0f, d) / 0.045f, 1.4f)) * 0.5f;
-                        float inner = Mathf.Clamp01(0.5f - (d + 0.028f) / 0.01f) * 0.45f;     // brighter core line
+                        float core = Mathf.Clamp01(0.5f - best / 0.005f);
+                        float glow = Mathf.Exp(-Mathf.Pow(Mathf.Max(0f, best) / 0.04f, 1.4f)) * 0.45f;
+                        float inner = Mathf.Clamp01(0.5f - (best + 0.016f) / 0.008f) * 0.45f;    // brighter core line
                         var mark = Color.Lerp(lineC, Color.white, inner);
-                        float a = Mathf.Max(core, glow);
-                        c = withBackground ? Color.Lerp(c, mark, a) : new Color(mark.r, mark.g, mark.b, a);
+                        float al = Mathf.Max(core, glow);
+                        c = withBackground ? Color.Lerp(c, mark, al) : new Color(mark.r, mark.g, mark.b, al);
                     }
                     px[y * size + x] = c;
                 }
@@ -419,7 +441,7 @@ namespace CircuitBreaker.EditorTools
             // 3. output
             string dir = Path.GetFullPath("Builds/Android");
             Directory.CreateDirectory(dir);
-            string name = $"ArrowBreaker_{BuildInfo.AppVersion}_code{PlayerSettings.Android.bundleVersionCode}_{AdLabel(ads)}{(debug ? "-debug" : "")}.{(bundle ? "aab" : "apk")}";
+            string name = $"ArrowBreaker_{BuildInfo.AppVersion}_code{PlayerSettings.Android.bundleVersionCode}_{AdLabel(ads)}{(debug ? "-debug" : "")}{(_qa ? "-qa" : "")}.{(bundle ? "aab" : "apk")}";
             string path = Path.Combine(dir, name);
 
             var options = new BuildPlayerOptions

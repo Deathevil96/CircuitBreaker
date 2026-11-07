@@ -30,7 +30,7 @@ namespace CircuitBreaker.Gameplay
         private Coroutine _colorRoutine;
         private Action<Vector3> _trail;      // reports where the line currently is, so the board can light the cells it crosses
 
-        private const float CoreWidth = 0.10f;
+        private const float CoreWidth = 0.125f;
 
         public static ArrowView Create(Transform parent, ArrowDef def, Func<Vector2Int, Vector3> toWorld, int boardW, int boardH, Action<Vector3> trail = null)
         {
@@ -209,6 +209,27 @@ namespace CircuitBreaker.Gameplay
             yield return new WaitForSeconds(seconds);
             Paint(_baseColor);
             _colorRoutine = null;
+        }
+
+        /// <summary>A blocked arrow the player has tapped: it breathes softly until its path clears and it leaves by itself.</summary>
+        public void SetQueued(bool on)
+        {
+            if (_queueRoutine != null) { StopCoroutine(_queueRoutine); _queueRoutine = null; }
+            if (on && !_gone) _queueRoutine = StartCoroutine(QueuedRoutine());
+            else if (!_gone && _colorRoutine == null) Paint(_baseColor);
+        }
+
+        private Coroutine _queueRoutine;
+
+        private IEnumerator QueuedRoutine()
+        {
+            float t = 0f;
+            while (!_gone)
+            {
+                t += Time.deltaTime;
+                if (_colorRoutine == null) Paint(Color.Lerp(_baseColor, Color.white, 0.18f + 0.22f * (0.5f + 0.5f * Mathf.Sin(t * 5f))));
+                yield return null;
+            }
         }
 
         public void Hint(float seconds = 2.4f)

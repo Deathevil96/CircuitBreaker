@@ -43,7 +43,8 @@ namespace CircuitBreaker.UI
             dim.name = "Sheet_" + name;
             UiKit.Stretch(dim.rectTransform);
 
-            var border = UiKit.Rounded(dim.transform, Theme.Line, 26f, raycast: true);
+            var border = UiKit.Rounded(dim.transform, Theme.Line, 34f, raycast: true);
+            border.gameObject.AddComponent<UiKit.PopIn>();
             var br = border.rectTransform;
             br.anchorMin = br.anchorMax = new Vector2(0.5f, 0.5f);
             br.pivot = new Vector2(0.5f, 0.5f);
@@ -56,7 +57,7 @@ namespace CircuitBreaker.UI
             var fit = border.gameObject.AddComponent<SheetFit>();
             fit.area = _overlay; fit.max = maxWidth;
 
-            var fill = UiKit.Rounded(br, Theme.Surface, 24f);
+            var fill = UiKit.Rounded(br, Theme.Surface, 32f);
             var inner = fill.gameObject.AddComponent<VerticalLayoutGroup>();
             inner.padding = new RectOffset(44, 44, 44, 40);
             inner.spacing = 22;
@@ -108,6 +109,12 @@ namespace CircuitBreaker.UI
         // =====================================================================
         // Win
         // =====================================================================
+        /// <summary>"Well done" pop-in and confetti from both screen edges, drawn above everything.</summary>
+        public void Celebrate(string message = "Well done")
+        {
+            Celebration.Play(_canvasRect, message);
+        }
+
         public void ShowWin(WinData d)
         {
             ClearChildren(_winBody);
@@ -395,6 +402,117 @@ namespace CircuitBreaker.UI
             else y = Mathf.Lerp(-24f, 200f, Mathf.Clamp01((_toastT - 3.6f) / 0.35f));
             _toastRect.anchoredPosition = new Vector2(0, y);
             if (_toastT >= 3.95f) { _toastT = -1f; _toastRect.gameObject.SetActive(false); }
+        }
+    }
+
+    /// <summary>
+    /// Level-complete celebration on the top of the UI: a "Well done" pop-in and confetti bursting in from both
+    /// sides of the screen. Purely visual, never blocks input, destroys itself when finished.
+    /// </summary>
+    public class Celebration : MonoBehaviour
+    {
+        private const float Duration = 2.4f;
+        private const int PiecesPerSide = 34;
+        private const float Gravity = 2600f;   // canvas units / s^2
+
+        private struct Piece
+        {
+            public RectTransform rt;
+            public Image img;
+            public Vector2 pos, vel;
+            public float spin, angle, flip, flipSpeed, life, drag;
+        }
+
+        private Piece[] _pieces;
+        private RectTransform _label;
+        private Text _text;
+        private float _t;
+        private Vector2 _size;
+
+        public static void Play(RectTransform canvas, string message)
+        {
+            var root = UiKit.Rect("Celebration", canvas);
+            UiKit.Stretch(root);
+            root.SetAsLastSibling();
+            root.gameObject.AddComponent<Celebration>().Init(root, message);
+        }
+
+        private void Init(RectTransform root, string message)
+        {
+            _size = root.rect.size;
+            if (_size.x <= 0 || _size.y <= 0) _size = new Vector2(1080, 1920);
+
+            // confetti first so the message sits above it
+            _pieces = new Piece[PiecesPerSide * 2];
+            for (int i = 0; i < _pieces.Length; i++)
+            {
+                bool left = i < PiecesPerSide;
+                var img = UiKit.Img(root, CyberTheme.Arrow(UnityEngine.Random.Range(0, 8)), ProcSprites.Pixel);
+                img.raycastTarget = false;
+                var rt = img.rectTransform;
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.sizeDelta = UnityEngine.Random.value < 0.3f ? new Vector2(16, 16) : new Vector2(UnityEngine.Random.Range(12f, 16f), UnityEngine.Random.Range(26f, 36f));
+
+                float ang = UnityEngine.Random.Range(52f, 78f) * Mathf.Deg2Rad;
+                float speed = UnityEngine.Random.Range(1500f, 2500f);
+                var start = new Vector2(left ? -_size.x * 0.5f - 10f : _size.x * 0.5f + 10f, -_size.y * UnityEngine.Random.Range(0.02f, 0.18f));
+                var vel = new Vector2(Mathf.Cos(ang) * speed * (left ? 1f : -1f), Mathf.Sin(ang) * speed);
+                _pieces[i] = new Piece
+                {
+                    rt = rt, img = img, pos = start, vel = vel,
+                    spin = UnityEngine.Random.Range(-540f, 540f), angle = UnityEngine.Random.Range(0f, 360f),
+                    flip = UnityEngine.Random.Range(0f, 6.28f), flipSpeed = UnityEngine.Random.Range(8f, 16f),
+                    life = UnityEngine.Random.Range(1.7f, Duration), drag = UnityEngine.Random.Range(1.4f, 2.2f),
+                };
+                rt.anchoredPosition = start;
+            }
+
+            _text = UiKit.Label(root, message, Theme.TitleSize + 34, Theme.Text, TextAnchor.MiddleCenter, bold: true);
+            _text.raycastTarget = false;
+            _text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            _label = _text.rectTransform;
+            _label.anchorMin = _label.anchorMax = _label.pivot = new Vector2(0.5f, 0.5f);
+            _label.sizeDelta = new Vector2(1000, 160);
+            _label.anchoredPosition = new Vector2(0, _size.y * 0.26f);
+            var glow = _text.gameObject.AddComponent<Outline>();
+            glow.effectColor = Theme.A(Theme.Accent, 0.55f);
+            glow.effectDistance = new Vector2(3, -3);
+            _label.localScale = Vector3.zero;
+        }
+
+        private void Update()
+        {
+            float dt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);
+            _t += dt;
+
+            for (int i = 0; i < _pieces.Length; i++)
+            {
+                ref var p = ref _pieces[i];
+                if (p.rt == null) continue;
+                p.vel *= Mathf.Exp(-p.drag * dt);
+                p.vel.y -= Gravity * dt * 0.5f;
+                p.pos += p.vel * dt;
+                p.angle += p.spin * dt;
+                p.flip += p.flipSpeed * dt;
+                p.rt.anchoredPosition = p.pos + new Vector2(Mathf.Sin(p.flip * 0.5f) * 14f, 0f);
+                p.rt.localRotation = Quaternion.Euler(0, 0, p.angle);
+                p.rt.localScale = new Vector3(Mathf.Cos(p.flip), 1f, 1f);
+                var c = p.img.color;
+                c.a = Mathf.Clamp01((p.life - _t) / 0.4f);
+                p.img.color = c;
+            }
+
+            // message: pop in with overshoot, hold, then drift up and fade
+            float s;
+            if (_t < 0.18f) s = Mathf.Lerp(0f, 1.12f, _t / 0.18f);
+            else if (_t < 0.3f) s = Mathf.Lerp(1.12f, 1f, (_t - 0.18f) / 0.12f);
+            else s = 1f;
+            _label.localScale = new Vector3(s, s, 1f);
+            float fade = Mathf.Clamp01((_t - 1.25f) / 0.45f);
+            var tc = _text.color; tc.a = 1f - fade; _text.color = tc;
+            _label.anchoredPosition = new Vector2(0, _size.y * 0.26f + fade * 60f);
+
+            if (_t >= Duration) Destroy(gameObject);
         }
     }
 }

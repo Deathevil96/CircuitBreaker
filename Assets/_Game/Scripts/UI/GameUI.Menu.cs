@@ -27,15 +27,16 @@ namespace CircuitBreaker.UI
         private RectTransform _menuDailyFill;
         private Image _menuStreakIcon;
 
-        private static readonly Color Cyan = CyberTheme.Arrow(0), Magenta = CyberTheme.Arrow(1), Lime = CyberTheme.Arrow(2), Amber = CyberTheme.Arrow(3);
+        private static readonly Color Cyan = CyberTheme.Arrow(0), Magenta = CyberTheme.Arrow(1), Lime = CyberTheme.Arrow(2), Amber = CyberTheme.Arrow(3), Orange = Theme.Hex("FF9A3D");
 
         /// <summary>Tinted tile with an accent icon badge. Returns the card so callers can add content to `content`.</summary>
         private static UiKit.Surface AccentCard(Transform parent, Color accent, string icon, float height, Action onClick, float flex)
         {
-            var card = UiKit.Card(parent, Color.Lerp(Theme.Surface, accent, 0.10f), Theme.A(accent, 0.55f), 26f, raycast: true);
+            var card = UiKit.Card(parent, accent, Theme.Lip(accent), 34f, raycast: true);
+            UiKit.Chunk(card, 10f);
             UiKit.Size(card.root, h: height, flexW: flex).preferredWidth = 0;
             // accent glow in the corner
-            var glow = UiKit.Img(card.content, Theme.A(accent, 0.20f), ProcSprites.GlowDot);
+            var glow = UiKit.Img(card.content, new Color(1f, 1f, 1f, 0.30f), ProcSprites.GlowDot);
             glow.raycastTarget = false;
             glow.rectTransform.anchorMin = glow.rectTransform.anchorMax = new Vector2(1, 1);
             glow.rectTransform.pivot = new Vector2(1, 1);
@@ -50,10 +51,10 @@ namespace CircuitBreaker.UI
         {
             var holder = UiKit.Row(parent, 0, TextAnchor.MiddleLeft);
             UiKit.Size(holder, h: size);
-            var ring = UiKit.Img(holder, Theme.A(accent, 0.18f), ProcSprites.Circle);
+            var ring = UiKit.Img(holder, Theme.A(Theme.Bg, 0.20f), ProcSprites.Circle);
             ring.raycastTarget = false;
             UiKit.Size(ring.rectTransform, w: size, h: size);
-            var ic = UiKit.Icon(ring.rectTransform, icon, size * 0.56f, accent);
+            var ic = UiKit.Icon(ring.rectTransform, icon, size * 0.56f, Theme.Bg);
             ic.rectTransform.anchorMin = ic.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             ic.rectTransform.anchoredPosition = Vector2.zero;
         }
@@ -61,7 +62,7 @@ namespace CircuitBreaker.UI
         /// <summary>Rounded chip that sizes itself to its contents.</summary>
         private static RectTransform Pill(Transform parent, Color accent)
         {
-            var bgImg = UiKit.Rounded(parent, Color.Lerp(Theme.Surface, accent, 0.10f), 36f);
+            var bgImg = UiKit.Rounded(parent, Color.Lerp(Theme.Surface, accent, 0.26f), 36f);
             var g = bgImg.gameObject.AddComponent<HorizontalLayoutGroup>();
             g.spacing = 12; g.padding = new RectOffset(22, 26, 0, 0);
             g.childAlignment = TextAnchor.MiddleCenter;
@@ -101,9 +102,11 @@ namespace CircuitBreaker.UI
             var topSpacer = UiKit.Rect("TopSpacer", col);
             _menuTopSpacer = UiKit.Size(topSpacer, h: 40);
             var t1 = UiKit.Label(col, "ARROW", 128, Theme.Text, TextAnchor.LowerLeft, bold: true);
+            t1.gameObject.AddComponent<UiKit.Bob>().phase = 0f;
             t1.horizontalOverflow = HorizontalWrapMode.Overflow;
             UiKit.Size(t1, h: 124);
             var t2 = UiKit.Label(col, "BREAKER", 128, Cyan, TextAnchor.UpperLeft, bold: true);
+            t2.gameObject.AddComponent<UiKit.Bob>().phase = 1.4f;
             t2.horizontalOverflow = HorizontalWrapMode.Overflow;
             UiKit.Size(t2, h: 124);
             var tag = UiKit.Label(col, "C I R C U I T    P U Z Z L E", Theme.Micro, Theme.Dim, TextAnchor.MiddleLeft);
@@ -111,7 +114,9 @@ namespace CircuitBreaker.UI
             UiKit.Spacer(col, 26);
 
             // ---- hero play card ----
-            var cont = UiKit.Card(col, Cyan, Cyan, 30f, raycast: true);
+            var cont = UiKit.Card(col, Amber, Theme.Lip(Amber), 40f, raycast: true);
+            UiKit.Chunk(cont, 12f);
+            cont.root.gameObject.AddComponent<UiKit.Bob>().amount = 0.014f;
             UiKit.Size(cont.root, h: 230);
             var deco = UiKit.Img(cont.content, Theme.A(Color.black, 0.10f), ProcSprites.ArrowGlyph);
             deco.raycastTarget = false;
@@ -130,7 +135,7 @@ namespace CircuitBreaker.UI
             var playDisc = UiKit.Img(crow, Theme.Bg, ProcSprites.Circle);
             playDisc.raycastTarget = false;
             UiKit.Size(playDisc.rectTransform, w: 120, h: 120);
-            var playIc = UiKit.Icon(playDisc.rectTransform, "play", 60, Cyan);
+            var playIc = UiKit.Icon(playDisc.rectTransform, "play", 60, Amber);
             playIc.rectTransform.anchorMin = playIc.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             playIc.rectTransform.anchoredPosition = new Vector2(4, 0);
             UiKit.Tappable(cont, () => ContinueClicked?.Invoke());
@@ -141,17 +146,17 @@ namespace CircuitBreaker.UI
             UiKit.Size(bento, h: 340);
             bento.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
 
-            var daily = AccentCard(bento, Amber, "calendar", 340, () => DailyClicked?.Invoke(), 1.2f);
+            var daily = AccentCard(bento, Orange, "calendar", 340, () => DailyClicked?.Invoke(), 1.2f);
             var dcol = UiKit.Column(daily.content, 8, 30, 28, fitHeight: false, align: TextAnchor.UpperLeft);
             UiKit.Stretch(dcol);
-            Badge(dcol, Amber, "calendar", 84);
+            Badge(dcol, Orange, "calendar", 84);
             var dflex = UiKit.Rect("Flex", dcol); UiKit.Size(dflex, flexW: 0, minH: 0).flexibleHeight = 1;
-            var dt = UiKit.Label(dcol, "Daily Run", Theme.H2 - 2, Theme.Text, TextAnchor.MiddleLeft, bold: true); UiKit.Size(dt, h: 48);
-            _menuDailySub = UiKit.Label(dcol, "", Theme.Caption, Theme.Dim, TextAnchor.MiddleLeft); UiKit.Size(_menuDailySub, h: 34);
+            var dt = UiKit.Label(dcol, "Daily Run", Theme.H2 - 2, Theme.Bg, TextAnchor.MiddleLeft, bold: true); UiKit.Size(dt, h: 48);
+            _menuDailySub = UiKit.Label(dcol, "", Theme.Caption, Theme.A(Theme.Bg, 0.78f), TextAnchor.MiddleLeft); UiKit.Size(_menuDailySub, h: 34);
             var bar = UiKit.ProgressBar(dcol, 0f, 10);
-            bar.color = Amber;
+            bar.color = Theme.Bg;
             _menuDailyFill = bar.rectTransform;
-            _menuDailyMonth = UiKit.Label(dcol, "", Theme.Micro, Theme.Faint, TextAnchor.MiddleLeft); UiKit.Size(_menuDailyMonth, h: 28);
+            _menuDailyMonth = UiKit.Label(dcol, "", Theme.Micro, Theme.A(Theme.Bg, 0.65f), TextAnchor.MiddleLeft); UiKit.Size(_menuDailyMonth, h: 28);
 
             var right = UiKit.Column(bento, 18, fitHeight: false, align: TextAnchor.UpperCenter);
             UiKit.Size(right, flexW: 1).preferredWidth = 0;
@@ -160,16 +165,16 @@ namespace CircuitBreaker.UI
             var free = AccentCard(right, Magenta, "freeplay", 161, () => FreeplayClicked?.Invoke(), 1f);
             var frow = UiKit.Row(free.content, 14, TextAnchor.MiddleLeft); UiKit.Stretch(frow, 24, 0, 18, 0);
             var fcol = UiKit.Column(frow, 2, fitHeight: false, align: TextAnchor.MiddleLeft); UiKit.Size(fcol, flexW: 1);
-            var ft = UiKit.Label(fcol, "Freeplay", Theme.Body - 2, Theme.Text, TextAnchor.MiddleLeft, bold: true); UiKit.Size(ft, h: 42);
-            _menuFreeSub = UiKit.Label(fcol, "", Theme.Micro, Theme.Dim, TextAnchor.MiddleLeft); UiKit.Size(_menuFreeSub, h: 30);
-            var fic = UiKit.Icon(frow, "freeplay", 48, Magenta); UiKit.Size(fic.rectTransform, w: 48, h: 48);
+            var ft = UiKit.Label(fcol, "Freeplay", Theme.Body - 2, Theme.Bg, TextAnchor.MiddleLeft, bold: true); UiKit.Size(ft, h: 42);
+            _menuFreeSub = UiKit.Label(fcol, "", Theme.Micro, Theme.A(Theme.Bg, 0.78f), TextAnchor.MiddleLeft); UiKit.Size(_menuFreeSub, h: 30);
+            var fic = UiKit.Icon(frow, "freeplay", 48, Theme.Bg); UiKit.Size(fic.rectTransform, w: 48, h: 48);
 
             var ov = AccentCard(right, Lime, "overload", 161, () => OverloadClicked?.Invoke(), 1f);
             var orow = UiKit.Row(ov.content, 14, TextAnchor.MiddleLeft); UiKit.Stretch(orow, 24, 0, 18, 0);
             var ocol = UiKit.Column(orow, 2, fitHeight: false, align: TextAnchor.MiddleLeft); UiKit.Size(ocol, flexW: 1);
-            var ot = UiKit.Label(ocol, "Overload", Theme.Body - 2, Theme.Text, TextAnchor.MiddleLeft, bold: true); UiKit.Size(ot, h: 42);
-            _menuOverloadSub = UiKit.Label(ocol, "", Theme.Micro, Theme.Dim, TextAnchor.MiddleLeft); UiKit.Size(_menuOverloadSub, h: 30);
-            var oic = UiKit.Icon(orow, "overload", 48, Lime); UiKit.Size(oic.rectTransform, w: 48, h: 48);
+            var ot = UiKit.Label(ocol, "Overload", Theme.Body - 2, Theme.Bg, TextAnchor.MiddleLeft, bold: true); UiKit.Size(ot, h: 42);
+            _menuOverloadSub = UiKit.Label(ocol, "", Theme.Micro, Theme.A(Theme.Bg, 0.78f), TextAnchor.MiddleLeft); UiKit.Size(_menuOverloadSub, h: 30);
+            var oic = UiKit.Icon(orow, "overload", 48, Theme.Bg); UiKit.Size(oic.rectTransform, w: 48, h: 48);
 
             // ---- bottom: two uneven buttons ----
             var bottom = UiKit.Row(col, 18, TextAnchor.MiddleLeft, expand: true);

@@ -247,6 +247,7 @@ namespace CircuitBreaker.UI
                 "mailto:" + AppLinks.SupportEmail + "?subject=" + Uri.EscapeDataString("Arrow Breaker feedback " + BuildInfo.Display) +
                 "&body=" + Uri.EscapeDataString("\n\n---\nDevice: " + SystemInfo.deviceModel + "\nOS: " + SystemInfo.operatingSystem + "\nVersion: " + BuildInfo.Display)), height: 116);
             UiKit.MakeRow(c, "Privacy policy", "How data is used", "info", () => Application.OpenURL(AppLinks.PrivacyPolicyUrl), height: 116);
+            UiKit.MakeRow(c, "Terms and conditions", "Rules and policies", "info", () => Application.OpenURL(AppLinks.TermsUrl), height: 116);
             var restore = UiKit.MakeRow(c, "Restore purchases", "Available when in-app purchases launch", "coin", null, height: 116, chevron: false);
             restore.SetEnabled(false);
 

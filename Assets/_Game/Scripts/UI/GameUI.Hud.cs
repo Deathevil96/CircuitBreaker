@@ -188,7 +188,7 @@ namespace CircuitBreaker.UI
             for (int i = 0; i < _hearts.Count; i++)
             {
                 _hearts[i].gameObject.SetActive(i < max && !unlimited);
-                _hearts[i].color = i < current ? Theme.Text : Theme.Faint;
+                _hearts[i].color = i < current ? Theme.Heart : Theme.A(Theme.Faint, 0.6f);
             }
         }
 
@@ -214,7 +214,11 @@ namespace CircuitBreaker.UI
             _timerFill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01(timeLeft / Mathf.Max(1f, timeMax)), 1f);
         }
 
-        public void SetCoins(int n) => _coinText.text = n.ToString("N0");
+        public void SetCoins(int n)
+        {
+            if (_coinText != null) _coinText.text = n.ToString("N0");
+            if (_menuCoins != null) _menuCoins.text = n.ToString("N0");     // the menu pill too, so a purchase shows at once
+        }
 
         public void SetPower(string id, int count, bool locked, int unlockLevel, bool active = false)
         {

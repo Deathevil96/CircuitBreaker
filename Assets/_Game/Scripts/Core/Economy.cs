@@ -32,6 +32,24 @@ namespace CircuitBreaker.Core
 
         // ----- coins -----
         public const int RefillCost = 50;
+
+        // Hard stays forgiving (3 hearts, free restart). Super/Ultra Hard have 2 hearts and a rewarded-ad continue per attempt.
+        // Nightmare has 1 heart, no ad continue, a coin-priced continue and a short wait before the free restart.
+        public const int NightmareRetrySeconds = 180;
+        public static int RefillCostFor(int level)
+        {
+            switch (DifficultyOf(level))
+            {
+                case Difficulty.SuperHard: case Difficulty.UltraHard: return 75;
+                case Difficulty.Nightmare: return 100 + level / 5;
+                default: return RefillCost;
+            }
+        }
+        public static bool AdContinueAllowed(int level) => DifficultyOf(level) != Difficulty.Nightmare;
+        public static bool AdContinuePerAttempt(int level) => DifficultyOf(level) >= Difficulty.SuperHard;   // others: once per app launch
+        /// <summary>Base coins for any win: generous at the start, tighter later so the hard tiers cost something.</summary>
+        public static int BaseWinCoins(int level) => level <= 30 ? 20 : level <= 50 ? 10 : 5;
+        public const int Level99Gift = 300;
         public static int Price(string id, int level)
         {
             int basePrice = id == "hint" ? 30 : id == "ruler" ? 60 : 120;
@@ -84,7 +102,13 @@ namespace CircuitBreaker.Core
             var r = new Rewards { lines = new List<string>() };
             var diff = DifficultyOf(level);
             TierReward(diff, out int th, out int tr, out int te, out int tc);
-            r.coins = 10 + 2 * bestCombo + (perfect ? 10 : 0) + tc;
+            r.coins = BaseWinCoins(level) + 2 * bestCombo + (perfect ? 10 : 0) + tc;
+            if (level == 99 && !SaveSystem.GiftGiven("l99coins"))
+            {
+                SaveSystem.SetGiftGiven("l99coins");
+                r.coins += Level99Gift;
+                r.lines.Add("NIGHTMARE AHEAD: +" + Level99Gift + " COINS");
+            }
 
             if (level >= 6) SaveSystem.PerfectStreak = perfect ? SaveSystem.PerfectStreak + 1 : 0;
 

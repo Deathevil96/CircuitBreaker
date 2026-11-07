@@ -9,19 +9,21 @@ namespace CircuitBreaker.UI
     /// <summary>Design tokens. Monochrome on purpose: the arrows carry the colour, the interface stays out of the way.</summary>
     public static class Theme
     {
-        public static readonly Color Bg = Hex("0A0A0C");
-        public static readonly Color Surface = Hex("131316");
-        public static readonly Color Surface2 = Hex("1B1B1F");
-        public static readonly Color Line = Hex("2A2A30");
-        public static readonly Color Text = Hex("F4F4F6");
-        public static readonly Color Dim = Hex("9A9AA4");
-        public static readonly Color Faint = Hex("5A5A64");
-        public static readonly Color Accent = Hex("19E6F2");
-        public static readonly Color Danger = Hex("D86A6A");
-        public static readonly Color Overlay = new Color(0f, 0f, 0f, 0.72f);
+        public static readonly Color Bg = Hex("15103A");
+        public static readonly Color Surface = Hex("261B5C");
+        public static readonly Color Surface2 = Hex("33257A");
+        public static readonly Color Line = Hex("4D3C9E");
+        public static readonly Color Text = Hex("FFFFFF");
+        public static readonly Color Dim = Hex("C6BCF5");
+        public static readonly Color Faint = Hex("8A7DCC");
+        public static readonly Color Accent = Hex("FFD23F");
+        public static readonly Color Danger = Hex("FF5C7A");
+        public static readonly Color Heart = Hex("FF4D7A");
+        public static readonly Color Overlay = new Color(0.05f, 0.03f, 0.16f, 0.80f);
 
         public const int TitleSize = 60, H1 = 46, H2 = 38, Body = 32, Caption = 26, Micro = 22;
-        public const float Radius = 18f;
+        public const float Radius = 28f;
+        public static Color Lip(Color c) => Color.Lerp(c, new Color(0.05f, 0.03f, 0.18f, 1f), 0.42f);
 
         public static Color Hex(string hex) { ColorUtility.TryParseHtmlString("#" + hex, out var c); return c; }
         public static Color A(Color c, float a) { c.a = a; return c; }
@@ -159,12 +161,45 @@ namespace CircuitBreaker.UI
             return s;
         }
 
+        /// <summary>Gives a card a raised look: the darker border shows as a lip along the bottom edge.</summary>
+        public static void Chunk(Surface s, float lip = 10f)
+        {
+            Stretch(s.fill.rectTransform, 0, lip, 0, 0);
+            Stretch(s.content, 0, lip, 0, 0);
+        }
+
+        /// <summary>Slow breathing scale, for logos and the main call to action.</summary>
+        public sealed class Bob : MonoBehaviour
+        {
+            public float amount = 0.03f, speed = 2.2f, phase;
+            private Vector3 _base = Vector3.one;
+            private void Awake() => _base = transform.localScale;
+            private void OnEnable() => transform.localScale = _base;
+            private void Update() => transform.localScale = _base * (1f + amount * Mathf.Sin(Time.unscaledTime * speed + phase));
+        }
+
+        /// <summary>Panels spring in with a little overshoot each time they are shown.</summary>
+        public sealed class PopIn : MonoBehaviour
+        {
+            private float _t;
+            private void OnEnable() { _t = 0f; transform.localScale = Vector3.one * 0.8f; }
+            private void Update()
+            {
+                if (_t >= 1f) return;
+                _t = Mathf.Min(1f, _t + Time.unscaledDeltaTime / 0.28f);
+                float c1 = 1.9f, c3 = c1 + 1f, x = _t - 1f;
+                float eased = 1f + c3 * x * x * x + c1 * x * x;          // easeOutBack
+                transform.localScale = Vector3.one * Mathf.LerpUnclamped(0.8f, 1f, eased);
+            }
+            private void OnDisable() => transform.localScale = Vector3.one;
+        }
+
         // ---------- buttons ----------
         public sealed class PressFeedback : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
         {
             private Vector3 _base = Vector3.one;
             private void Awake() => _base = transform.localScale;
-            public void OnPointerDown(PointerEventData e) => transform.localScale = _base * 0.97f;
+            public void OnPointerDown(PointerEventData e) => transform.localScale = _base * 0.94f;
             public void OnPointerUp(PointerEventData e) => transform.localScale = _base;
             public void OnPointerExit(PointerEventData e) => transform.localScale = _base;
             private void OnDisable() => transform.localScale = _base;
@@ -186,14 +221,15 @@ namespace CircuitBreaker.UI
         public static UiButton MakeButton(Transform parent, string text, ButtonStyle style, Action onClick, string iconName = null, float height = 104, int fontSize = Theme.Body)
         {
             var ub = new UiButton { style = style };
-            Color fillC = style == ButtonStyle.Primary ? Theme.Accent : style == ButtonStyle.Secondary ? Theme.Surface : Color.clear;
-            Color borderC = style == ButtonStyle.Primary ? Theme.Accent : style == ButtonStyle.Secondary ? Theme.Line : Color.clear;
+            Color fillC = style == ButtonStyle.Primary ? Theme.Accent : style == ButtonStyle.Secondary ? Theme.Surface2 : Color.clear;
+            Color borderC = style == ButtonStyle.Primary ? Theme.Lip(Theme.Accent) : style == ButtonStyle.Secondary ? Theme.Lip(Theme.Surface2) : Color.clear;
             Color textC = style == ButtonStyle.Primary ? Theme.Bg : style == ButtonStyle.Secondary ? Theme.Text : Theme.Dim;
 
-            var s = Card(parent, fillC, borderC, 16f, raycast: true);
+            var s = Card(parent, fillC, borderC, 28f, raycast: true);
             ub.border = s.border; ub.fill = s.fill;
             s.root.name = "Btn_" + text;
             Size(s.root, h: height);
+            if (style != ButtonStyle.Ghost) Chunk(s, 10f);
 
             var row = Row(s.content, 14, TextAnchor.MiddleCenter);
             Stretch(row);
@@ -230,8 +266,9 @@ namespace CircuitBreaker.UI
         public static UiButton MakeIconButton(Transform parent, string iconName, Action onClick, float size = 96, bool bordered = true)
         {
             var ub = new UiButton { style = ButtonStyle.Secondary };
-            var s = Card(parent, bordered ? Theme.Surface : Color.clear, bordered ? Theme.Line : Color.clear, 16f, raycast: true);
+            var s = Card(parent, bordered ? Theme.Surface2 : Color.clear, bordered ? Theme.Lip(Theme.Surface2) : Color.clear, 26f, raycast: true);
             ub.border = s.border; ub.fill = s.fill;
+            if (bordered) Chunk(s, 8f);
             s.root.name = "Icon_" + iconName;
             Size(s.root, w: size, h: size);
             ub.icon = Icon(s.content, iconName, size * 0.5f, Theme.Text);
@@ -251,8 +288,9 @@ namespace CircuitBreaker.UI
         public static UiButton MakeRow(Transform parent, string title, string subtitle, string iconName, Action onClick, string trailing = null, bool chevron = true, float height = 128)
         {
             var ub = new UiButton { style = ButtonStyle.Secondary };
-            var s = Card(parent, Theme.Surface, Theme.Line, 16f, raycast: true);
+            var s = Card(parent, Theme.Surface2, Theme.Lip(Theme.Surface2), 26f, raycast: true);
             ub.border = s.border; ub.fill = s.fill;
+            Chunk(s, 8f);
             s.root.name = "Row_" + title;
             Size(s.root, h: height);
 

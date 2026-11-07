@@ -67,6 +67,8 @@ namespace CircuitBreaker.Generation
     /// <summary>Maps levels to generation parameters (GDD sections 4 and 13).</summary>
     public static class LevelCatalog
     {
+        public const int MaxSize = 26;
+
         /// <summary>Easy to Nightmare. Milestone levels recur: Hard every 20, Super Hard every 30, Ultra Hard every 50, Nightmare every 100.</summary>
         public static Difficulty DifficultyOf(int level)
         {
@@ -75,6 +77,7 @@ namespace CircuitBreaker.Generation
             if (level % 50 == 0) return Difficulty.UltraHard;
             if (level % 30 == 0) return Difficulty.SuperHard;
             if (level % 20 == 0) return Difficulty.Hard;
+            if (level > 100 && level % 10 == 0) return Difficulty.Hard;     // more spikes once the player is experienced
             return level <= 20 ? Difficulty.Easy : Difficulty.Medium;
         }
 
@@ -101,30 +104,33 @@ namespace CircuitBreaker.Generation
             }
             else if (level <= 60)
             {
-                size = 10 + Mathf.FloorToInt((level - 21) * 3.99f / 39f); // 10..13
+                size = 11 + Mathf.FloorToInt((level - 21) * 3.99f / 39f); // 11..14
                 p.minLen = 2; p.maxLen = 5; p.maxBends = 3;
-                p.minDepth = 6 + (level - 21) / 13; p.fill = 0.65f;
+                p.minDepth = 7 + (level - 21) / 11; p.fill = 0.67f;
             }
             else if (level <= 150)
             {
-                size = 14 + Mathf.FloorToInt((level - 61) * 4.99f / 89f); // 14..18
+                size = 15 + Mathf.FloorToInt((level - 61) * 4.99f / 89f); // 15..19
                 p.minLen = 2; p.maxLen = 6; p.maxBends = 4;
-                p.minDepth = 10 + (level - 61) / 15; p.fill = 0.70f;
+                p.minDepth = 11 + (level - 61) / 12; p.fill = 0.72f;
             }
             else
             {
-                size = Mathf.Min(24, 20 + (level - 151) / 50);
-                p.minLen = 2; p.maxLen = 7; p.maxBends = 4;
-                p.minDepth = 17; p.fill = 0.72f;
+                // Keeps climbing to level 5000 instead of plateauing: board size, chain depth, arrow length, bends and density.
+                size = Mathf.Min(MaxSize, 21 + (level - 151) / 100);                  // 21 at 151, 26 by ~650
+                p.minLen = 2; p.maxLen = level < 600 ? 7 : 8;
+                p.maxBends = level < 1000 ? 4 : 5;
+                p.minDepth = Mathf.Min(34, 19 + (level - 151) / 90);                  // 19 -> 34 around level 1500
+                p.fill = Mathf.Min(0.78f, 0.74f + (level - 151) / 20000f);
             }
 
             // Tougher tiers: bigger board, longer and more bent arrows, deeper dependency chains.
             switch (difficulty)
             {
                 case Difficulty.Hard: Bump(ref p, ref size, 2, 2, 1, 1, 0.04f); break;
-                case Difficulty.SuperHard: Bump(ref p, ref size, 3, 4, 1, 1, 0.05f); break;
-                case Difficulty.UltraHard: Bump(ref p, ref size, 4, 6, 2, 1, 0.06f); break;
-                case Difficulty.Nightmare: Bump(ref p, ref size, 5, 8, 2, 2, 0.08f); p.hearts = level <= 5 ? 0 : 2; break;
+                case Difficulty.SuperHard: Bump(ref p, ref size, 3, 4, 1, 1, 0.05f); if (level > 5) p.hearts = 2; break;
+                case Difficulty.UltraHard: Bump(ref p, ref size, 4, 6, 2, 1, 0.06f); if (level > 5) p.hearts = 2; break;
+                case Difficulty.Nightmare: Bump(ref p, ref size, 5, 8, 2, 2, 0.08f); p.hearts = level <= 5 ? 0 : 1; break;
             }
 
             string shape = spec.shape ?? ShapeLibrary.NameFor(level);
@@ -146,15 +152,17 @@ namespace CircuitBreaker.Generation
                 p.fill = Mathf.Min(0.88f, p.fill + 0.15f);    // denser, so the silhouette reads
             }
 
+            float iceCap = level > 1000 ? 0.28f : 0.2f;
             float tierMul = difficulty == Difficulty.Nightmare ? 1.8f : difficulty >= Difficulty.UltraHard ? 1.3f : 1f;
-            p.iceChance = level >= 20 ? Mathf.Min(0.2f, (0.08f + (level - 20) * 0.002f) * tierMul) : 0f;
-            p.keyPairs = level >= 35 ? Mathf.Min(5, 1 + (level - 35) / 30 + (difficulty == Difficulty.Nightmare ? 1 : 0)) : 0;
+            p.iceChance = level >= 20 ? Mathf.Min(iceCap, (0.08f + (level - 20) * 0.002f) * tierMul) : 0f;
+            int keyCap = level > 1000 ? 8 : 5;
+            p.keyPairs = level >= 35 ? Mathf.Min(keyCap, 1 + (level - 35) / 30 + (difficulty == Difficulty.Nightmare ? 1 : 0)) : 0;
             return p;
         }
 
         private static void Bump(ref LevelParams p, ref int size, int sizeAdd, int depthAdd, int lenAdd, int bendAdd, float fillAdd)
         {
-            size = Mathf.Min(24, size + sizeAdd);
+            size = Mathf.Min(MaxSize, size + sizeAdd);
             p.minDepth += depthAdd;
             p.maxLen = Mathf.Min(8, p.maxLen + lenAdd);
             p.maxBends = Mathf.Min(5, p.maxBends + bendAdd);

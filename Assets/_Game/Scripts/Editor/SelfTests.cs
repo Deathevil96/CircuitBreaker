@@ -108,7 +108,16 @@ namespace CircuitBreaker.EditorTools
             Check(LevelCatalog.DifficultyOf(100) == Difficulty.Nightmare, "L100 nightmare");
             Check(LevelCatalog.DifficultyOf(150) == Difficulty.UltraHard, "L150 ultra hard (50 beats 30)");
             Check(LevelCatalog.DifficultyOf(200) == Difficulty.Nightmare, "L200 nightmare");
-            Check(LevelCatalog.For(100).hearts == 2, "nightmare has 2 hearts");
+            Check(LevelCatalog.For(100).hearts == 1, "nightmare has 1 heart");
+            Check(LevelCatalog.For(60).hearts == 2 && LevelCatalog.For(20).hearts == 3, "super hard 2 hearts, hard 3");
+            Check(LevelCatalog.For(50).hearts == 2 && LevelCatalog.For(25).hearts == 3, "ultra hard 2 hearts, medium 3");
+            Check(Economy.RefillCostFor(25) == 50 && Economy.RefillCostFor(20) == 50, "refill 50 on easy tiers");
+            Check(Economy.RefillCostFor(30) == 75 && Economy.RefillCostFor(50) == 75, "refill 75 on super and ultra hard");
+            Check(Economy.RefillCostFor(100) == 120 && Economy.RefillCostFor(1000) == 300, "nightmare refill scales with level");
+            Check(!Economy.AdContinueAllowed(100) && Economy.AdContinueAllowed(30) && Economy.AdContinueAllowed(8), "no ad continue on nightmare only");
+            Check(Economy.AdContinuePerAttempt(30) && Economy.AdContinuePerAttempt(100) && !Economy.AdContinuePerAttempt(20), "ad per attempt from super hard up");
+            Check(Economy.BaseWinCoins(10) == 20 && Economy.BaseWinCoins(30) == 20 && Economy.BaseWinCoins(31) == 10 && Economy.BaseWinCoins(50) == 10 && Economy.BaseWinCoins(51) == 5, "base win coins taper");
+            Check(LevelCatalog.DifficultyOf(110) == Difficulty.Hard && LevelCatalog.DifficultyOf(1100) == Difficulty.Nightmare, "extra hard spikes after level 100");
             Check(LevelCatalog.For(3).hearts == 0 && LevelCatalog.For(7).hearts == 3, "tutorial free, then 3 hearts");
         }
 
