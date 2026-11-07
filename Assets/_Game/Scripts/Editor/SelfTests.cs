@@ -156,7 +156,7 @@ namespace CircuitBreaker.EditorTools
             var a = LevelGenerator.Generate(33, 200); var b = LevelGenerator.Generate(33, 200);
             Check(a.arrows.Count == b.arrows.Count && a.seed == b.seed && a.depth == b.depth, "deterministic generation");
             // rolling level window: device sizing, sliding and eviction
-            Check(LevelCache.ForDevice(2000, 8) == 10 && LevelCache.ForDevice(4000, 8) == 20 && LevelCache.ForDevice(6000, 8) == 30 && LevelCache.ForDevice(12000, 8) == 50 && LevelCache.ForDevice(12000, 4) == 20, "level window size follows device RAM and cores");
+            Check(LevelCache.ForDevice(2000, 8) == 6 && LevelCache.ForDevice(4000, 8) == 12 && LevelCache.ForDevice(6000, 8) == 20 && LevelCache.ForDevice(12000, 8) == 30 && LevelCache.ForDevice(12000, 4) == 10, "level window size follows device RAM and cores");
             LevelCache.Clear(); LevelCache.OverrideCapacity(10);
             LevelCache.Focus(1);
             Check(LevelCache.WindowEnd == 11, "window covers capacity levels from the current one");

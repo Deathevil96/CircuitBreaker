@@ -15,6 +15,7 @@ namespace CircuitBreaker.Core
     /// </summary>
     public static class LevelCache
     {
+        private const float StartDelay = 4f;                    // seconds after the window moves before background work starts
         private const int KeepBehind = 2;                       // allows a quick replay of the last levels
         private static readonly Dictionary<int, LevelData> Items = new Dictionary<int, LevelData>();
         private static readonly object Lock = new object();
@@ -39,8 +40,8 @@ namespace CircuitBreaker.Core
         /// <summary>Window size for a device: small phones keep a few levels, strong ones up to 50.</summary>
         public static int ForDevice(int ramMb, int cores)
         {
-            int n = ramMb <= 0 ? 20 : ramMb < 3000 ? 10 : ramMb < 4500 ? 20 : ramMb < 7000 ? 30 : 50;
-            if (cores > 0 && cores <= 4) n = Mathf.Min(n, 20);
+            int n = ramMb <= 0 ? 10 : ramMb < 3000 ? 6 : ramMb < 4500 ? 12 : ramMb < 7000 ? 20 : 30;
+            if (cores > 0 && cores <= 4) n = Mathf.Min(n, 10);
             return Mathf.Max(5, n);
         }
 
@@ -79,16 +80,20 @@ namespace CircuitBreaker.Core
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
             int from = _current, to = _windowEnd;
-            Task.Run(() =>
+            // A low-priority thread that waits a few seconds after launch: the game and its menu get the processor first,
+            // and slow phones are not slowed down while they start.
+            var worker = new Thread(() =>
             {
+                for (float waited = 0f; waited < StartDelay && !token.IsCancellationRequested; waited += 0.25f) Thread.Sleep(250);
                 for (int l = from; l < to && !token.IsCancellationRequested; l++)
                 {
                     bool have; lock (Lock) have = Items.ContainsKey(l);
                     if (have) continue;
                     try { Store(l, LevelGenerator.Generate(l)); } catch (System.Exception e) { Debug.LogWarning("[CB] prefetch failed for level " + l + ": " + e.Message); }
-                    Thread.Sleep(5);                             // leave the CPU to the game
+                    Thread.Sleep(40);                            // leave the CPU to the game
                 }
-            }, token);
+            }) { IsBackground = true, Priority = System.Threading.ThreadPriority.Lowest, Name = "LevelPrefetch" };
+            worker.Start();
         }
 
         public static void Clear()

@@ -33,6 +33,22 @@
       "source": "embedded",
       "dependencies": {}
     },
+    "com.google.firebase.analytics": {
+      "version": "file:FirebaseTgz/com.google.firebase.analytics-14.1.0.tgz",
+      "depth": 0,
+      "source": "local-tarball",
+      "dependencies": {
+        "com.google.firebase.app": "14.1.0"
+      }
+    },
+    "com.google.firebase.app": {
+      "version": "file:FirebaseTgz/com.google.firebase.app-14.1.0.tgz",
+      "depth": 0,
+      "source": "local-tarball",
+      "dependencies": {
+        "com.google.external-dependency-manager": "1.2.190"
+      }
+    },
     "com.google.play.appupdate": {
       "version": "1.8.5",
       "depth": 0,
