@@ -138,7 +138,7 @@ namespace CircuitBreaker.EditorTools
 
         /// <summary>
         /// Play needs a higher version code for every upload. A simple counter in ProjectSettings/BuildNumber.txt
-        /// (committed to git) starts at 1 and grows by one per build.
+        /// (committed to git) grows by one per AAB build; APK builds do not change it.
         /// </summary>
         private static int ReadBuildNumber()
         {
@@ -443,7 +443,8 @@ namespace CircuitBreaker.EditorTools
                 Debug.LogError("[CircuitBreaker] Build stopped: AdUnits.cs still contains REPLACE_ME production ad unit IDs.");
                 return;
             }
-            int code = NextBuildNumber();
+            // Only bundles (the files that go to Google Play) get a new version code. Dev, QA and promo APKs reuse the current number.
+            int code = bundle ? NextBuildNumber() : Mathf.Max(1, ReadBuildNumber());
             sb.AppendLine(Prepare(ads, debug, code));
             if (!ApplyKeystore()) { Debug.LogError("[CircuitBreaker] Build stopped: no upload keystore (run 'Prepare for Closed Testing')."); return; }
             EditorUserBuildSettings.buildAppBundle = bundle;
