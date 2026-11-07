@@ -269,11 +269,16 @@ namespace CircuitBreaker.UI
             _statusRoutine = StartCoroutine(StatusRoutine(text, seconds));
         }
 
-        // ---------- loading overlay: shown only when a board takes longer than a moment ----------
+        // ---------- loading screen: shown for every board load (start-up, level changes, restarts) ----------
         private GameObject _loading;
         private Text _loadingText;
+        private RectTransform _loadingBar;
         private string _loadingBase;
         private float _loadingStart;
+        private float _loadingShownAt = -10f;
+
+        /// <summary>Seconds since the loading screen appeared (so callers can keep it up long enough to be seen, not flicker).</summary>
+        public float LoadingVisibleFor => _loading != null && _loading.activeSelf ? Time.unscaledTime - _loadingShownAt : 0f;
 
         public void ShowLoading(string text)
         {
@@ -281,12 +286,26 @@ namespace CircuitBreaker.UI
             {
                 var root = UiKit.Rect("Loading", _safe);
                 UiKit.Stretch(root);
-                UiKit.Img(root, Theme.A(Theme.Bg, 0.92f), null, true);
+                UiKit.Img(root, Theme.Bg, null, true);                       // opaque and swallows touches
+
+                var title = UiKit.Label(root, "ARROW", Theme.TitleSize, Theme.Text, TextAnchor.MiddleCenter, true);
+                UiKit.Anchor(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 150), new Vector2(900, 90));
+                var title2 = UiKit.Label(root, "BREAKER", Theme.TitleSize, new Color(0.18f, 0.9f, 1f), TextAnchor.MiddleCenter, true);
+                UiKit.Anchor(title2.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 70), new Vector2(900, 90));
+
+                var track = UiKit.Rect("Track", root);
+                UiKit.Anchor(track, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -40), new Vector2(460, 14));
+                UiKit.Img(track, Theme.Surface2, null, false);
+                var mask = track.gameObject.AddComponent<RectMask2D>();
+                _loadingBar = UiKit.Rect("Bar", track);
+                UiKit.Anchor(_loadingBar, new Vector2(0, 0), new Vector2(0, 1), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(150, 0));
+                UiKit.Img(_loadingBar, Theme.Accent, null, false);
+
                 _loadingText = UiKit.Label(root, "", Theme.Body, Theme.Dim, TextAnchor.MiddleCenter);
-                UiKit.Stretch(_loadingText.rectTransform);
+                UiKit.Anchor(_loadingText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -110), new Vector2(900, 60));
                 _loading = root.gameObject;
             }
-            if (!_loading.activeSelf) _loadingStart = Time.unscaledTime;
+            if (!_loading.activeSelf) { _loadingStart = Time.unscaledTime; _loadingShownAt = Time.unscaledTime; }
             _loadingBase = text;
             _loading.SetActive(true);
             _loading.transform.SetAsLastSibling();
@@ -301,8 +320,14 @@ namespace CircuitBreaker.UI
         private void AnimateLoading()
         {
             if (_loading == null || !_loading.activeSelf) return;
-            int dots = (int)((Time.unscaledTime - _loadingStart) * 3f) % 4;
-            _loadingText.text = _loadingBase + new string('.', dots);
+            float t = Time.unscaledTime - _loadingStart;
+            _loadingText.text = _loadingBase + new string('.', (int)(t * 3f) % 4);
+            if (_loadingBar != null)
+            {
+                float x = Mathf.Repeat(t * 0.9f, 1f) * (460f + 150f) - 75f;      // slides across the track
+                _loadingBar.anchoredPosition = new Vector2(x, 0f);
+            }
+            _loading.transform.SetAsLastSibling();                                // always above menus opened meanwhile
         }
 
         private void LateUpdate() => AnimateLoading();

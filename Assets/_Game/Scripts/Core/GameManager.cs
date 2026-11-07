@@ -30,6 +30,7 @@ namespace CircuitBreaker.Core
 
         /// <summary>Tests set this so boards load immediately instead of over several frames.</summary>
         public static bool SynchronousLoading;
+        private const float MinLoadingSeconds = 0.35f;
 
         public const float ComboWindow = 2f;
         private const int HintUnlock = Economy.HintUnlock, ExtractUnlock = Economy.ExtractUnlock, RulerUnlock = Economy.RulerUnlock;
@@ -412,6 +413,7 @@ namespace CircuitBreaker.Core
             InputLocked = true;
             _outcomeShown = false;
             UI.HoldBanner("");
+            UI.ShowLoading(mode == GameMode.Classic ? "Loading level " + spec.index : "Loading");   // every board load shows the loading screen
             if (mode != GameMode.Overload) _ovRunning = false;
             var routine = BeginRoutine(mode, spec, key, resume, _levelToken);
             if (SynchronousLoading) { while (routine.MoveNext()) System.Threading.Thread.Sleep(1); }
@@ -431,7 +433,6 @@ namespace CircuitBreaker.Core
                 while (!task.IsCompleted)
                 {
                     shown += Time.unscaledDeltaTime;
-                    if (shown > 0.25f) UI.ShowLoading("Building level " + spec.index);   // only for slow waits
                     yield return null;
                 }
                 if (token != _levelToken) { UI.HideLoading(); yield break; }
@@ -443,6 +444,8 @@ namespace CircuitBreaker.Core
                 else generated = task.Result;
                 if (classic) LevelCache.Store(spec.index, generated);
             }
+            if (token != _levelToken) { UI.HideLoading(); yield break; }
+            while (!SynchronousLoading && UI.LoadingVisibleFor < MinLoadingSeconds) yield return null;     // long enough to read, short enough not to annoy
             if (token != _levelToken) { UI.HideLoading(); yield break; }
             UI.HideLoading();
             if (classic) LevelCache.Focus(spec.index);
@@ -458,6 +461,7 @@ namespace CircuitBreaker.Core
             _combo = 0; _bestCombo = 0; _heartsLost = 0;
             InputLocked = false;
             Cam.InputEnabled = true;
+            Platform.StartupInputGate.OpenAfter(0.4f);                 // touches made while the game was loading are dropped, not replayed
 
             Board.Build(Level);
             Cam.Frame(Level.width, Level.height);
