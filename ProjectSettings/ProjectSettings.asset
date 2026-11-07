@@ -16,7 +16,7 @@ PlayerSettings:
   productName: Arrow Breaker
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
-  m_SplashScreenBackgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  m_SplashScreenBackgroundColor: {r: 0.08235294, g: 0.0627451, b: 0.22745098, a: 1}
   m_ShowUnitySplashScreen: 1
   m_ShowUnitySplashLogo: 0
   m_SplashScreenOverlayOpacity: 1
@@ -40,8 +40,8 @@ PlayerSettings:
     width: 1
     height: 1
   m_SplashScreenLogos:
-  - logo: {fileID: -3144765552462846002, guid: 014e4863ecd9940029f337f7a9eedff7, type: 3}
-    duration: 2.5
+  - logo: {fileID: 1989812182405751813, guid: 2d3aab604b97d4c929377e720d71836c, type: 3}
+    duration: 2
   m_VirtualRealitySplashScreen: {fileID: 0}
   m_HolographicTrackingLossScreen: {fileID: 0}
   defaultScreenWidth: 1920
@@ -176,10 +176,10 @@ PlayerSettings:
   buildNumber:
     Standalone: 0
     VisionOS: 0
-    iPhone: 24
+    iPhone: 28
     tvOS: 0
   overrideDefaultApplicationIdentifier: 1
-  AndroidBundleVersionCode: 24
+  AndroidBundleVersionCode: 28
   AndroidMinSdkVersion: 25
   AndroidTargetSdkVersion: 0
   AndroidPreferredInstallLocation: 1
@@ -783,8 +783,8 @@ PlayerSettings:
   ps4IncludedModules: []
   ps4attribVROutputEnabled: 0
   monoEnv: 
-  splashScreenBackgroundSourceLandscape: {fileID: 0}
-  splashScreenBackgroundSourcePortrait: {fileID: 0}
+  splashScreenBackgroundSourceLandscape: {fileID: -2162679392990605217, guid: 8a8e5bfe36ec140cb80f313441058696, type: 3}
+  splashScreenBackgroundSourcePortrait: {fileID: -6351056373843390765, guid: 5c5137182a08846b4abb07139bea4e94, type: 3}
   blurSplashScreenBackground: 1
   spritePackerPolicy: 
   webGLMemorySize: 32
@@ -816,7 +816,7 @@ PlayerSettings:
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Android: CB_ADMOB;CB_ADMOB_PRODUCTION
+    Android: CB_TEST_ADS;CB_DEBUG
     Standalone: 
   additionalCompilerArguments: {}
   platformArchitecture: {}
