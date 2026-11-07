@@ -10,8 +10,10 @@ namespace CircuitBreaker.Gameplay
     {
         // Fractions of screen height reserved for the HUD (top) and booster bar (bottom),
         // plus any device cutout / home-indicator inset reported by Screen.safeArea.
-        public static float TopSafe { get { Insets(out float t, out _); return 0.115f + t; } }
-        public static float BottomSafe { get { Insets(out _, out float b); return 0.165f + b + Ads.AdService.BannerFraction; } }
+        /// <summary>Promo reels reserve their own caption and HUD space; negative = use the game layout.</summary>
+        public static float TopOverride = -1f, BottomOverride = -1f;
+        public static float TopSafe { get { if (TopOverride >= 0f) return TopOverride; Insets(out float t, out _); return 0.115f + t; } }
+        public static float BottomSafe { get { if (BottomOverride >= 0f) return BottomOverride; Insets(out _, out float b); return 0.165f + b + Ads.AdService.BannerFraction; } }
 
         private static void Insets(out float top, out float bottom)
         {

@@ -71,6 +71,10 @@ namespace CircuitBreaker.EditorTools
         [MenuItem("CircuitBreaker/Android/>>> BUILD LATEST RELEASE (production AAB) <<<", false, 1)]
         public static void BuildLatestRelease() => Build(AdMode.AdMobProduction, bundle: true, debug: false);
 
+        /// <summary>Promo build for recording ads: test ads, debug panel and the Promo reels (never upload this to Google Play).</summary>
+        [MenuItem("CircuitBreaker/Android/>>> BUILD PROMO APK (reels + debug panel) <<<", false, 2)]
+        public static void BuildPromoApk() => Build(AdMode.TestStub, bundle: false, debug: true);
+
         [MenuItem("CircuitBreaker/Android/5. Build Release APK (no ads, install on a phone)")]
         public static void BuildReleaseApk() => Build(AdMode.None, bundle: false, debug: false);
 

@@ -35,6 +35,8 @@ namespace CircuitBreaker.UI
         public const float DefaultBannerUnits = 130f;      // 50dp on a typical 1080-wide phone
         private float _bannerUnits = DefaultBannerUnits;
 
+        public bool DebugOpen { get; set; }
+        public DebugPanel DebugUI { get; private set; }
         public bool ModalOpen => _open.Count > 0;
         public bool MenuOpen => _menuRoot != null && _menuRoot.activeSelf;
         public Transform SafeRoot => _safe;
@@ -80,6 +82,11 @@ namespace CircuitBreaker.UI
             BuildSheets();
             BuildToast();
             ApplyBannerLayout();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || CB_DEBUG
+            DebugUI = new GameObject("DebugPanel").AddComponent<DebugPanel>();
+            DebugUI.transform.SetParent(transform, false);
+            DebugUI.Build(this);
+#endif
         }
 
         private static void EnsureEventSystem()
@@ -183,6 +190,7 @@ namespace CircuitBreaker.UI
         public bool PointerInPlayArea(Vector2 screen)
         {
             if (ModalOpen || Time.unscaledTime - _lastLayerClose < TapShield) return false;
+            if (DebugOpen && screen.x < Screen.width * 0.56f) return false;
             float fy = screen.y / Mathf.Max(1, Screen.height);
             return fy > CameraController.BottomSafe && fy < 1f - CameraController.TopSafe;
         }
