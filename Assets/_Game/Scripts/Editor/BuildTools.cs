@@ -67,6 +67,10 @@ namespace CircuitBreaker.EditorTools
             finally { _qa = false; }
         }
 
+        /// <summary>One click for the real thing: self tests, production AdMob ids, a new version code, a signed AAB for Google Play.</summary>
+        [MenuItem("CircuitBreaker/Android/>>> BUILD LATEST RELEASE (production AAB) <<<", false, 1)]
+        public static void BuildLatestRelease() => Build(AdMode.AdMobProduction, bundle: true, debug: false);
+
         [MenuItem("CircuitBreaker/Android/5. Build Release APK (no ads, install on a phone)")]
         public static void BuildReleaseApk() => Build(AdMode.None, bundle: false, debug: false);
 

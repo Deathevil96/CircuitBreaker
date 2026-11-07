@@ -139,6 +139,7 @@ namespace CircuitBreaker.Core
 #else
             AdService.Init(null);                                         // no SDK wired: no ads, and no ad rewards are granted
 #endif
+            gameObject.AddComponent<PlayUpdate>();                         // Google's mandatory update screen (Android, Play installs only)
             _restartAdTarget = UnityEngine.Random.Range(2, 4);            // the restart ad appears on the 2nd or 3rd reset
 
             SetupCamera();
