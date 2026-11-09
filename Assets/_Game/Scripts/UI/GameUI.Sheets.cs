@@ -204,10 +204,10 @@ namespace CircuitBreaker.UI
         // =====================================================================
         // Win
         // =====================================================================
-        /// <summary>"Well done" pop-in and confetti from both screen edges, drawn above everything.</summary>
-        public void Celebrate(string message = "Well done")
+        /// <summary>A random cheer (any language) pops in with confetti from both screen edges, drawn above everything.</summary>
+        public void Celebrate(string message = null)
         {
-            Celebration.Play(_canvasRect, message);
+            Celebration.Play(_canvasRect, message ?? CircuitBreaker.Core.Cheers.Pick());
         }
 
         public void ShowWin(WinData d)

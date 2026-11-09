@@ -830,7 +830,8 @@ namespace CircuitBreaker.Core
             _finished = true;
             int token = _levelToken;
             UI.Celebrate();
-            yield return new WaitForSeconds(0.75f);
+            Board.PlayShapeFinale();
+            yield return new WaitForSeconds(1.2f);
             if (token != _levelToken) yield break;
             FinishWin();
         }

@@ -23,14 +23,14 @@ namespace CircuitBreaker.Gameplay
         public event Action Changed;                        // any structural change (for ruler refresh)
 
         private const float PickRadius = 0.62f;
-        private const float EdgePadAlpha = 0.4f, PulseAlpha = 0.95f, PadFadePerSecond = 1.6f;
+        private const float TrailAlpha = 0.6f;      // a cell an arrow has slid across keeps this dot until the level ends
 
         /// <summary>Arrows that have left, in order. Saved so a board can be resumed exactly.</summary>
         public readonly List<int> RemovedOrder = new List<int>();
 
         private SpriteRenderer[] _pads;
-        private float[] _padBase, _padAlpha;
-        private readonly List<int> _litPads = new List<int>();
+        private float[] _padAlpha;
+        private Coroutine _finale;
 
         private readonly Dictionary<int, ArrowView> _views = new Dictionary<int, ArrowView>();
         private Transform _root, _decor, _rulerRoot;
@@ -48,7 +48,6 @@ namespace CircuitBreaker.Gameplay
             Clear();
             Level = level;
             RemovedOrder.Clear();
-            _litPads.Clear();
             Model = new Board(level);
             _flat = ProcSprites.LineMaterial;
 
@@ -70,6 +69,7 @@ namespace CircuitBreaker.Gameplay
 
         public void Clear()
         {
+            if (_finale != null) { StopCoroutine(_finale); _finale = null; }
             _views.Clear();
             CancelQueue();
             if (_root != null)
@@ -89,60 +89,24 @@ namespace CircuitBreaker.Gameplay
             int w = Model.Width, h = Model.Height;
             var rng = new System.Random(level.seed ^ 0x5bd1e995);
 
-            // Grid pads: only the silhouette's edge stays visible. Every other pad is hidden and lights up briefly
-            // when an arrow slides across it, then fades again.
+            // No grid dots at the start. A pad is created for every playable cell but stays invisible until an arrow
+            // slides across it; then it shows a dot that stays until the level ends (the arrow's trail).
             _pads = new SpriteRenderer[w * h];
-            _padBase = new float[w * h];
             _padAlpha = new float[w * h];
             for (int x = 0; x < w; x++)
                 for (int y = 0; y < h; y++)
                 {
                     if (!level.InShape(x, y)) continue;
-                    bool edge = x == 0 || y == 0 || x == w - 1 || y == h - 1
-                                || !level.InShape(x - 1, y) || !level.InShape(x + 1, y) || !level.InShape(x, y - 1) || !level.InShape(x, y + 1);
                     int idx = x * h + y;
                     var pad = new GameObject("Pad").AddComponent<SpriteRenderer>();
                     pad.transform.SetParent(_decor, false);
                     pad.transform.position = GridToWorld(new Vector2Int(x, y));
-                    pad.transform.localScale = Vector3.one * (edge ? 0.14f : 0.12f);
+                    pad.transform.localScale = Vector3.one * 0.13f;
                     pad.sprite = ProcSprites.Circle;
                     pad.sortingOrder = -10;
                     _pads[idx] = pad;
-                    _padBase[idx] = edge ? EdgePadAlpha : 0f;
-                    _padAlpha[idx] = _padBase[idx];
+                    _padAlpha[idx] = 0f;
                     SetPad(idx);
-                }
-
-            // Dotted outline along the shape boundary. Arrows run through cell centres, so the cell edges are never
-            // covered by them: the silhouette stays readable from the first move.
-            var corners = new HashSet<long>();
-            for (int x = 0; x < w; x++)
-                for (int y = 0; y < h; y++)
-                {
-                    if (!level.InShape(x, y)) continue;
-                    // (dx,dy) = direction to the neighbour; the edge runs perpendicular to it.
-                    int[,] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
-                    for (int d = 0; d < 4; d++)
-                    {
-                        int nx = x + dirs[d, 0], ny = y + dirs[d, 1];
-                        bool outside = nx < 0 || ny < 0 || nx >= w || ny >= h || !level.InShape(nx, ny);
-                        if (!outside) continue;
-                        // edge midpoint and its two corners, in half-cell units
-                        int mx = 2 * x + dirs[d, 0], my = 2 * y + dirs[d, 1];
-                        int ex = dirs[d, 1] != 0 ? 1 : 0, ey = dirs[d, 0] != 0 ? 1 : 0;
-                        foreach (var p in new[] { new Vector2Int(mx, my), new Vector2Int(mx - ex, my - ey), new Vector2Int(mx + ex, my + ey) })
-                            if (corners.Add(((long)(p.x + 4) << 20) | (uint)(p.y + 4)))
-                            {
-                                var dot = new GameObject("Outline").AddComponent<SpriteRenderer>();
-                                dot.transform.SetParent(_decor, false);
-                                dot.transform.position = new Vector3(p.x * 0.5f - (w - 1) * 0.5f - 0.0f, p.y * 0.5f - (h - 1) * 0.5f, 0f);
-                                dot.transform.localScale = Vector3.one * 0.09f;
-                                dot.sprite = ProcSprites.Circle;
-                                var oc = CyberTheme.Pad; oc.a = 0.42f;
-                                dot.color = oc;
-                                dot.sortingOrder = -9;
-                            }
-                    }
                 }
 
             // Faint PCB traces in the background.
@@ -432,22 +396,74 @@ namespace CircuitBreaker.Gameplay
             _pads[idx].color = c;
         }
 
-        /// <summary>Lights the grid pad nearest to a world point (called for every point of a moving arrow).</summary>
+        /// <summary>Leaves a trail dot on the grid cell nearest to a world point (called for every point of a moving arrow).</summary>
         public void Pulse(Vector3 world)
         {
             if (_pads == null || Model == null) return;
             int x = Mathf.RoundToInt(world.x + (Model.Width - 1) * 0.5f);
             int y = Mathf.RoundToInt(world.y + (Model.Height - 1) * 0.5f);
             if (x < 0 || y < 0 || x >= Model.Width || y >= Model.Height) return;
-            int idx = x * Model.Height + y;
-            if (_pads[idx] == null) return;
-            if (_padAlpha[idx] < PulseAlpha - 0.001f)
+            LightPad(x * Model.Height + y);
+        }
+
+        /// <summary>
+        /// Level cleared: the whole silhouette appears as coloured dots sweeping in from one random direction,
+        /// holds for a moment, then vanishes sweeping out toward another random direction.
+        /// </summary>
+        public void PlayShapeFinale()
+        {
+            if (_pads == null || Model == null) return;
+            if (_finale != null) StopCoroutine(_finale);
+            _finale = StartCoroutine(ShapeFinale());
+        }
+
+        private static readonly Vector2[] SweepDirs =
+        {
+            new Vector2(1, 0), new Vector2(-1, 0), new Vector2(0, 1), new Vector2(0, -1),
+            new Vector2(1, 1).normalized, new Vector2(-1, 1).normalized, new Vector2(1, -1).normalized, new Vector2(-1, -1).normalized,
+        };
+
+        private IEnumerator ShapeFinale()
+        {
+            int w = Model.Width, h = Model.Height;
+            Vector2 vin = SweepDirs[UnityEngine.Random.Range(0, SweepDirs.Length)];
+            Vector2 vout = SweepDirs[UnityEngine.Random.Range(0, SweepDirs.Length)];
+            float half = Mathf.Max(1f, (w + h) * 0.5f);
+            const float appear = 0.45f, hold = 0.35f, vanish = 0.5f, soft = 0.3f;
+            float total = appear + hold + vanish, t = 0f;
+
+            while (t < total)
             {
-                if (_padAlpha[idx] <= _padBase[idx] + 0.001f) _litPads.Add(idx);
-                _padAlpha[idx] = PulseAlpha;
-                SetPad(idx);
+                t += Time.unscaledDeltaTime;
+                float f1 = Mathf.Min(1f, t / appear) * (1f + soft);
+                float f2 = Mathf.Max(0f, (t - appear - hold) / vanish) * (1f + soft);
+                for (int x = 0; x < w; x++)
+                    for (int y = 0; y < h; y++)
+                    {
+                        int idx = x * h + y;
+                        var pad = _pads != null && idx < _pads.Length ? _pads[idx] : null;
+                        if (pad == null) continue;
+                        float px = x - (w - 1) * 0.5f, py = y - (h - 1) * 0.5f;
+                        float tin = Mathf.Clamp01((px * vin.x + py * vin.y) / half * 0.5f + 0.5f);
+                        float tout = Mathf.Clamp01((px * vout.x + py * vout.y) / half * 0.5f + 0.5f);
+                        float a = Mathf.Clamp01((f1 - tin) / soft) * (1f - Mathf.Clamp01((f2 - tout) / soft));
+                        var c = CyberTheme.Arrow((x * 3 + y * 2) % 8); c.a = a;
+                        pad.color = c;
+                        pad.transform.localScale = Vector3.one * (0.13f + 0.2f * a);
+                    }
+                yield return null;
             }
-            else _padAlpha[idx] = PulseAlpha;
+            if (_pads != null)
+                for (int i = 0; i < _pads.Length; i++)
+                    if (_pads[i] != null) { var c = _pads[i].color; c.a = 0f; _pads[i].color = c; _pads[i].transform.localScale = Vector3.one * 0.13f; _padAlpha[i] = 0f; }
+            _finale = null;
+        }
+
+        private void LightPad(int idx)
+        {
+            if (_pads == null || idx < 0 || idx >= _pads.Length || _pads[idx] == null || _padAlpha[idx] >= TrailAlpha) return;
+            _padAlpha[idx] = TrailAlpha;
+            SetPad(idx);
         }
 
         /// <summary>Removes arrows that were already cleared in a saved run, instantly and without animation.</summary>
@@ -456,6 +472,7 @@ namespace CircuitBreaker.Gameplay
             foreach (int id in ids)
             {
                 if (!Model.Arrows.ContainsKey(id)) continue;
+                foreach (var c in Model.Arrows[id].cells) LightPad(c.x * Model.Height + c.y);      // a resumed board shows the trail of what already left
                 var changed = Model.Remove(id);
                 RemovedOrder.Add(id);
                 if (_views.TryGetValue(id, out var v) && v != null) Destroy(v.gameObject);
@@ -470,18 +487,6 @@ namespace CircuitBreaker.Gameplay
 
         private void Update()
         {
-            if (_litPads.Count > 0)
-            {
-                float step = PadFadePerSecond * Time.deltaTime;
-                for (int i = _litPads.Count - 1; i >= 0; i--)
-                {
-                    int idx = _litPads[i];
-                    _padAlpha[idx] = Mathf.MoveTowards(_padAlpha[idx], _padBase[idx], step * (_padAlpha[idx] > 0.8f ? 0.4f : 1f));
-                    SetPad(idx);
-                    if (Mathf.Approximately(_padAlpha[idx], _padBase[idx])) _litPads.RemoveAt(i);
-                }
-            }
-
             if (_rulerUntil > 0f && Time.time >= _rulerUntil)
             {
                 _rulerUntil = 0f;

@@ -43,6 +43,280 @@ namespace CircuitBreaker.Generation
 
         private static LevelData BuildOnce(int levelIndex, LevelParams p, int seed)
         {
+            // A tiling can occasionally fail (a lone cell that no neighbour can take); a different walk order fixes it.
+            for (int retry = 0; retry < 40; retry++)
+            {
+                var full = BuildTiled(levelIndex, p, unchecked(seed + retry * 15485863));
+                if (full != null) return full;
+            }
+            return BuildInserted(levelIndex, p, seed);      // the old generator (may leave gaps) is only a last-resort safety net
+        }
+
+        // =====================================================================
+        // Full tiling: every playable cell belongs to an arrow, no gaps at all.
+        // =====================================================================
+
+        private static LevelData BuildTiled(int levelIndex, LevelParams p, int seed)
+        {
+            var rng = new System.Random(seed);
+            int w = p.width, h = p.height;
+            var level = new LevelData { index = levelIndex, width = w, height = h, hearts = p.hearts, seed = seed };
+            level.shape = p.shape;
+            level.mask = ShapeLibrary.Build(level.shape, w, h);
+            DropIsolatedCells(level);
+
+            var paths = Tile(rng, level, p);
+            if (paths == null) return null;
+            if (!Orient(level, paths)) return null;
+
+            ColorBalance(level, rng);
+            Solver.Solve(level, out level.depth);
+            AssignMechanics(level, p, rng);
+            Solver.Solve(level, out level.depth);
+            level.wraps = CountWraps(level);
+            return level;
+        }
+
+        /// <summary>A playable cell with no playable neighbour cannot hold an arrow (they need two cells), so it is not part of the board.</summary>
+        private static void DropIsolatedCells(LevelData level)
+        {
+            if (level.mask == null) return;
+            int w = level.width, h = level.height;
+            var drop = new List<int>();
+            for (int x = 0; x < w; x++)
+                for (int y = 0; y < h; y++)
+                {
+                    if (!level.InShape(x, y)) continue;
+                    bool any = false;
+                    foreach (var d in Dirs)
+                    {
+                        int nx = x + d.x, ny = y + d.y;
+                        if (nx >= 0 && ny >= 0 && nx < w && ny < h && level.InShape(nx, ny)) { any = true; break; }
+                    }
+                    if (!any) drop.Add(x * h + y);
+                }
+            foreach (int i in drop) level.mask[i] = false;
+        }
+
+        /// <summary>Covers every playable cell with simple paths of at least two cells. Returns null if it cannot.</summary>
+        private static List<List<Vector2Int>> Tile(System.Random rng, LevelData level, LevelParams p)
+        {
+            int w = level.width, h = level.height;
+            var cover = new int[w, h];
+            for (int x = 0; x < w; x++) for (int y = 0; y < h; y++) cover[x, y] = -1;
+            var paths = new List<List<Vector2Int>>();
+
+            int Free(Vector2Int c)
+            {
+                int n = 0;
+                foreach (var d in Dirs)
+                {
+                    var q = c + d;
+                    if (q.x >= 0 && q.y >= 0 && q.x < w && q.y < h && level.InShape(q.x, q.y) && cover[q.x, q.y] == -1) n++;
+                }
+                return n;
+            }
+
+            // Walks start at the most cramped uncovered cell and always step to the most cramped neighbour,
+            // so corners and dead ends are used up first and arrows end up hugging and coiling round each other.
+            var ties = new List<Vector2Int>();
+            while (true)
+            {
+                int bestFree = int.MaxValue;
+                ties.Clear();
+                for (int x = 0; x < w; x++)
+                    for (int y = 0; y < h; y++)
+                    {
+                        if (!level.InShape(x, y) || cover[x, y] != -1) continue;
+                        var c = new Vector2Int(x, y);
+                        int f = Free(c);
+                        if (f == 0) continue;
+                        if (f < bestFree) { bestFree = f; ties.Clear(); }
+                        if (f == bestFree) ties.Add(c);
+                    }
+                if (ties.Count == 0) break;
+
+                var start = ties[rng.Next(ties.Count)];
+                int id = paths.Count;
+                var path = new List<Vector2Int> { start };
+                cover[start.x, start.y] = id;
+                int target = rng.Next(p.minLen, p.maxLen + 1);
+                int bends = 0;
+                Vector2Int heading = Vector2Int.zero;
+                var options = new List<Vector2Int>(4);
+                while (path.Count < target)
+                {
+                    var cur = path[path.Count - 1];
+                    options.Clear();
+                    foreach (var d in Dirs)
+                    {
+                        var q = cur + d;
+                        if (q.x < 0 || q.y < 0 || q.x >= w || q.y >= h || !level.InShape(q.x, q.y) || cover[q.x, q.y] != -1) continue;
+                        bool bend = path.Count >= 2 && d != heading;
+                        if (bend && bends >= p.maxBends) continue;
+                        options.Add(d);
+                    }
+                    if (options.Count == 0) break;
+
+                    Vector2Int pick;
+                    double roll = rng.NextDouble();
+                    if (heading != Vector2Int.zero && options.Contains(heading) && roll < p.straight) pick = heading;
+                    else if (rng.NextDouble() < p.hug)
+                    {
+                        int best = int.MaxValue; pick = options[0];
+                        foreach (var d in options) { int f = Free(cur + d); if (f < best) { best = f; pick = d; } }
+                    }
+                    else pick = options[rng.Next(options.Count)];
+
+                    if (path.Count >= 2 && pick != heading) bends++;
+                    heading = pick;
+                    var next = cur + pick;
+                    path.Add(next);
+                    cover[next.x, next.y] = id;
+                }
+                paths.Add(path);
+            }
+
+            // Cells nobody could reach (no free neighbour left): join them to a neighbouring arrow.
+            for (int x = 0; x < w; x++)
+                for (int y = 0; y < h; y++)
+                {
+                    if (!level.InShape(x, y) || cover[x, y] != -1) continue;
+                    if (!AbsorbSingleton(rng, level, paths, cover, new Vector2Int(x, y))) return null;
+                }
+            return paths;
+        }
+
+        private static bool AbsorbSingleton(System.Random rng, LevelData level, List<List<Vector2Int>> paths, int[,] cover, Vector2Int s)
+        {
+            var order = new List<Vector2Int>(Dirs);
+            Shuffle(rng, order);
+            foreach (var d in order)
+            {
+                var n = s + d;
+                if (n.x < 0 || n.y < 0 || n.x >= level.width || n.y >= level.height || cover[n.x, n.y] == -1) continue;
+                int pi = cover[n.x, n.y];
+                var P = paths[pi];
+                int idx = P.IndexOf(n);
+                if (idx == 0) P.Insert(0, s);
+                else if (idx == P.Count - 1) P.Add(s);
+                else if (P.Count - 1 - idx >= 2)
+                {
+                    var tail = P.GetRange(idx + 1, P.Count - idx - 1);
+                    P.RemoveRange(idx + 1, tail.Count);
+                    P.Add(s);
+                    paths.Add(tail);
+                }
+                else if (idx >= 2)
+                {
+                    var second = new List<Vector2Int> { s };
+                    second.AddRange(P.GetRange(idx, P.Count - idx));
+                    P.RemoveRange(idx, P.Count - idx);
+                    paths.Add(second);
+                }
+                else continue;
+                for (int i = 0; i < paths.Count; i++) foreach (var c in paths[i]) cover[c.x, c.y] = i;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Chooses each path's head so the board is solvable: repeatedly takes every path that has an end with a clear
+        /// ray (exactly the solver's waves), picking the end with the longest ray. If nothing can leave, the longest
+        /// remaining path is split in two, which gives it new ends. Returns false only if nothing can be split.
+        /// </summary>
+        private static bool Orient(LevelData level, List<List<Vector2Int>> paths)
+        {
+            int w = level.width, h = level.height;
+            var occ = new int[w, h];
+            for (int x = 0; x < w; x++) for (int y = 0; y < h; y++) occ[x, y] = -1;
+            for (int i = 0; i < paths.Count; i++) foreach (var c in paths[i]) occ[c.x, c.y] = i;
+
+            var alive = new List<int>();
+            for (int i = 0; i < paths.Count; i++) alive.Add(i);
+            var removal = new List<ArrowDef>();
+            var wave = new List<int>();
+            var waveReverse = new List<bool>();
+
+            int guard = 0;
+            while (alive.Count > 0 && guard++ < 100000)
+            {
+                wave.Clear(); waveReverse.Clear();
+                foreach (int i in alive)
+                {
+                    var P = paths[i];
+                    int bestLen = -1; bool bestReverse = false;
+                    for (int end = 0; end < 2; end++)
+                    {
+                        bool reversed = end == 1;
+                        var head = reversed ? P[0] : P[P.Count - 1];
+                        var neck = reversed ? P[1] : P[P.Count - 2];
+                        var d = head - neck;
+                        int dist = RayDistance(occ, w, h, head, d);
+                        if (dist >= 0 && dist > bestLen) { bestLen = dist; bestReverse = reversed; }
+                    }
+                    if (bestLen >= 0) { wave.Add(i); waveReverse.Add(bestReverse); }
+                }
+
+                if (wave.Count == 0)
+                {
+                    int pick = -1;
+                    foreach (int i in alive) if (paths[i].Count >= 4 && (pick == -1 || paths[i].Count > paths[pick].Count)) pick = i;
+                    if (pick == -1) return false;
+                    var P = paths[pick];
+                    int cut = P.Count / 2;
+                    var second = P.GetRange(cut, P.Count - cut);
+                    P.RemoveRange(cut, P.Count - cut);
+                    int ni = paths.Count;
+                    paths.Add(second);
+                    foreach (var c in second) occ[c.x, c.y] = ni;
+                    alive.Add(ni);
+                    continue;
+                }
+
+                for (int k = 0; k < wave.Count; k++)
+                {
+                    int i = wave[k];
+                    var P = paths[i];
+                    if (waveReverse[k]) P.Reverse();
+                    foreach (var c in P) occ[c.x, c.y] = -1;
+                    alive.Remove(i);
+                    removal.Add(new ArrowDef { cells = P, dir = P[P.Count - 1] - P[P.Count - 2] });
+                }
+            }
+
+            // Ids run in reverse solve order, like the original generator (the last to leave comes first).
+            removal.Reverse();
+            for (int i = 0; i < removal.Count; i++)
+            {
+                removal[i].id = i;
+                removal[i].colorIndex = i % PaletteSize;
+                level.arrows.Add(removal[i]);
+            }
+            return true;
+        }
+
+        /// <summary>Cells from the head to the board edge along d, or -1 if anything still on the board is in the way.</summary>
+        private static int RayDistance(int[,] occ, int w, int h, Vector2Int head, Vector2Int d)
+        {
+            int n = 0;
+            var q = head + d;
+            while (q.x >= 0 && q.y >= 0 && q.x < w && q.y < h)
+            {
+                if (occ[q.x, q.y] != -1) return -1;
+                n++;
+                q += d;
+            }
+            return n;
+        }
+
+        // =====================================================================
+        // The original insertion generator (kept as a safety net; may leave gaps).
+        // =====================================================================
+
+        private static LevelData BuildInserted(int levelIndex, LevelParams p, int seed)
+        {
             var rng = new System.Random(seed);
             int w = p.width, h = p.height;
             var level = new LevelData { index = levelIndex, width = w, height = h, hearts = p.hearts, seed = seed };

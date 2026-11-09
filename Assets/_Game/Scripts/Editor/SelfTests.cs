@@ -50,6 +50,7 @@ namespace CircuitBreaker.EditorTools
                 Run("RunSave", RunSaveChecks);
                 Run("Daily", DailyChecks);
                 Run("Board restore", BoardRestore);
+                Run("Cheers", CheerChecks);
             }
             finally { SaveSystem.ExitSandbox(); }
             return $"Self tests: {_pass} passed, {_fail} failed in {clock.ElapsedMilliseconds} ms\n{Report}";
@@ -252,6 +253,15 @@ namespace CircuitBreaker.EditorTools
             Stats.ClearAttempts(7);
             Check(Stats.Attempts(7) == 0, "attempts cleared on win");
             Clock.Override = null;
+        }
+
+        private static void CheerChecks()
+        {
+            Check(Cheers.All.Length >= 40, "plenty of cheers", Cheers.All.Length.ToString());
+            foreach (var c in Cheers.All) Check(!string.IsNullOrWhiteSpace(c) && c.Length <= 20, "cheer fits: " + c);
+            string prev = Cheers.Pick(); bool repeated = false;
+            for (int i = 0; i < 200; i++) { string n = Cheers.Pick(); if (n == prev) repeated = true; prev = n; }
+            Check(!repeated, "a cheer never repeats back to back");
         }
 
         private static void AchievementChecks()

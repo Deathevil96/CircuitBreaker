@@ -42,6 +42,9 @@ namespace CircuitBreaker.Generation
                     }
                 }
                 if (d.arrows.Count < 3) r.problem = r.problem ?? "too few arrows";
+                for (int x = 0; x < d.width; x++)
+                    for (int y = 0; y < d.height; y++)
+                        if (d.InShape(x, y) && !used.Contains(new Vector2Int(x, y))) { r.problem = r.problem ?? ("gap at " + x + "," + y); }
 
                 var board = new Board(d);
                 int guard = 0;
