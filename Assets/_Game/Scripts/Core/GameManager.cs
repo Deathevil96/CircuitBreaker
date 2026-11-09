@@ -514,6 +514,7 @@ namespace CircuitBreaker.Core
             Log($"LOAD {key} [{mode}]: {Level.shape} {Level.width}x{Level.height}, {Level.arrows.Count} arrows, depth {Level.depth}, seed {Level.seed}, gen {_lastGenMs:F0} ms, {DifficultyInfo.Name((Difficulty)Level.difficulty)}");
 
             if (mode == GameMode.Classic && !_debugForced && !_replay && resume == null) ClassicLevelIntro();
+            QueueMechanicTips();
             // A menu opened during loading stays on top; the board simply finishes behind it.
         }
 
@@ -550,8 +551,46 @@ namespace CircuitBreaker.Core
             if (LevelIndex == 1) UI.Toast("Tap an arrow with a clear path to send it out.", 4f);
             else if (LevelIndex == 2) UI.Toast("A blocked arrow bumps. Free the ones in front first.", 4f);
             else if (LevelIndex == 21) UI.Toast("From here boards take a shape. Arrows leave through the open space.", 4f);
-            else if (LevelIndex == 20) UI.Toast("Ice frees after N other arrows have escaped.", 4f);
-            else if (LevelIndex == 35) UI.Toast("Key arrows (ringed) unlock the padlocked arrow.", 4f);
+        }
+
+        // First time a board holds ice or key/lock arrows, a short explainer the player must dismiss.
+        private void QueueMechanicTips()
+        {
+            if (Mode == GameMode.Overload || _debugForced) return;
+            bool ice = false, key = false, locked = false;
+            foreach (var a in Level.arrows)
+            {
+                if (a.kind == ArrowKind.Ice) ice = true;
+                else if (a.kind == ArrowKind.Key) key = true;
+                else if (a.kind == ArrowKind.Locked) locked = true;
+            }
+            _tips.Clear();
+            if (ice && !SaveSystem.GiftGiven("tipIce")) _tips.Enqueue("tipIce");
+            if ((key || locked) && !SaveSystem.GiftGiven("tipKey")) _tips.Enqueue("tipKey");
+            if (_tips.Count > 0) StartCoroutine(ShowTipsSoon());
+        }
+
+        private readonly Queue<string> _tips = new Queue<string>();
+
+        private IEnumerator ShowTipsSoon()
+        {
+            int token = _levelToken;
+            yield return new WaitForSeconds(0.6f);
+            if (token != _levelToken) yield break;
+            ShowNextTip();
+        }
+
+        private void ShowNextTip()
+        {
+            if (_tips.Count == 0) return;
+            if (UI.ModalOpen || UI.MenuOpen) { _tips.Clear(); return; }      // something else took over: try again next board
+            string id = _tips.Dequeue();
+            SaveSystem.SetGiftGiven(id);
+            SaveSystem.Save();
+            if (id == "tipIce")
+                UI.ShowTip("New: ice arrows", "An ice arrow is frozen and shows a number. Every time any other arrow escapes, the number drops by 1. At 0 it thaws and you can move it. Tapping a frozen arrow costs nothing.", ShowNextTip);
+            else
+                UI.ShowTip("New: keys and locks", "An arrow with a glowing ring is a key. An arrow with a padlock is locked and cannot move. Send the key arrow out and the padlocked one opens. Tapping a locked arrow costs nothing.", ShowNextTip);
         }
 
         // =====================================================================

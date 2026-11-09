@@ -79,6 +79,19 @@ namespace CircuitBreaker.UI
             _ovResultSheet = MakeSheet("OverloadResult", out _ovResultBody);
             _updateSheet = MakeSheet("UpdateRequired", out _updateBody);
             _rateSheet = MakeSheet("Rate", out _rateBody);
+            _tipSheet = MakeSheet("Tip", out _tipBody);
+        }
+
+        private GameObject _tipSheet;
+        private RectTransform _tipBody;
+
+        public void ShowTip(string title, string body, Action onClose)
+        {
+            ClearChildren(_tipBody);
+            SheetTitle(_tipBody, title, body);
+            UiKit.Spacer(_tipBody, 6);
+            UiKit.MakeButton(_tipBody, "Got it", ButtonStyle.Primary, () => { SetLayer(_tipSheet, false); onClose?.Invoke(); }, null, 104);
+            SetLayer(_tipSheet, true);
         }
 
         // =====================================================================
