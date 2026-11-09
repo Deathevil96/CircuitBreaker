@@ -103,40 +103,40 @@ namespace CircuitBreaker.Generation
                     case 2: size = 5; p.minLen = 2; p.maxLen = 3; p.maxBends = 1; p.minDepth = 3; p.fill = 0.60f; p.hug = 0.1f; p.straight = 0.6f;  break;
                     case 3: size = 6; p.minLen = 2; p.maxLen = 4; p.maxBends = 2; p.minDepth = 4; p.fill = 0.62f; p.hug = 0.3f; p.straight = 0.55f; break;
                     case 4: size = 7; p.minLen = 3; p.maxLen = 4; p.maxBends = 2; p.minDepth = 5; p.fill = 0.65f; p.hug = 0.4f; p.straight = 0.5f; p.minWraps = 1; break;
-                    default: size = 8; p.minLen = 3; p.maxLen = 6; p.maxBends = 4; p.minDepth = 6; p.fill = 0.72f; p.hug = 1f;  p.straight = 0.3f; p.minWraps = 5; break;
+                    default: size = 8; p.minLen = 4; p.maxLen = 10; p.maxBends = 7; p.minDepth = 6; p.fill = 0.82f; p.hug = 1f;  p.straight = 0.25f; p.minWraps = 6; break;
                 }
             }
             else if (level <= 20)
             {
                 // Dense from level 6 on: high fill, strong hugging, a wrap target that grows with the board.
                 size = 8 + Mathf.FloorToInt((level - 6) * 2.99f / 14f);   // 8..10
-                p.minLen = 3; p.maxLen = 6; p.maxBends = 4;
-                p.minDepth = 7 + (level - 6) / 5; p.fill = 0.76f;
-                p.hug = 0.9f; p.straight = 0.35f; p.minWraps = size;
+                p.minLen = 5; p.maxLen = 14; p.maxBends = 9;
+                p.minDepth = 7 + (level - 6) / 5; p.fill = 0.88f;
+                p.hug = 1f; p.straight = 0.25f; p.minWraps = size;
             }
             else if (level <= 60)
             {
                 size = 12 + Mathf.FloorToInt((level - 21) * 3.99f / 39f); // 12..15
-                p.minLen = 3; p.maxLen = 7; p.maxBends = 5;
-                p.minDepth = 9 + (level - 21) / 10; p.fill = 0.78f;
-                p.hug = 0.9f; p.straight = 0.33f; p.minWraps = size * 2;
+                p.minLen = 5; p.maxLen = 18; p.maxBends = 11;
+                p.minDepth = 9 + (level - 21) / 10; p.fill = 0.90f;
+                p.hug = 1f; p.straight = 0.25f; p.minWraps = size * 2;
             }
             else if (level <= 150)
             {
                 size = 16 + Mathf.FloorToInt((level - 61) * 4.99f / 89f); // 16..20
-                p.minLen = 3; p.maxLen = 8; p.maxBends = 5;
-                p.minDepth = 13 + (level - 61) / 11; p.fill = 0.80f;
-                p.hug = 0.92f; p.straight = 0.32f; p.minWraps = size * 3;
+                p.minLen = 6; p.maxLen = 22; p.maxBends = 13;
+                p.minDepth = 13 + (level - 61) / 11; p.fill = 0.92f;
+                p.hug = 1f; p.straight = 0.25f; p.minWraps = size * 3;
             }
             else
             {
                 // Keeps climbing to level 5000 instead of plateauing: board size, chain depth, arrow length, bends and density.
                 size = Mathf.Min(MaxSize, 22 + (level - 151) / 100);                  // 22 at 151, 26 by ~550
-                p.minLen = 3; p.maxLen = 8;
-                p.maxBends = level < 1000 ? 5 : 6;
+                p.minLen = 6; p.maxLen = 26;
+                p.maxBends = level < 1000 ? 14 : 16;
                 p.minDepth = Mathf.Min(38, 22 + (level - 151) / 80);                  // 22 -> 38 around level 1430
-                p.fill = Mathf.Min(0.84f, 0.80f + (level - 151) / 20000f);
-                p.hug = 0.95f; p.straight = 0.3f; p.minWraps = size * 3;
+                p.fill = Mathf.Min(0.94f, 0.92f + (level - 151) / 20000f);
+                p.hug = 1f; p.straight = 0.25f; p.minWraps = size * 3;
             }
 
             // Tougher tiers: bigger board, longer and more bent arrows, deeper dependency chains.
@@ -164,7 +164,7 @@ namespace CircuitBreaker.Generation
                 float area = cells / Mathf.Max(0.3f, info.coverage);
                 p.width = Mathf.Clamp(Mathf.RoundToInt(Mathf.Sqrt(area * info.aspect)), 8, 36);
                 p.height = Mathf.Clamp(Mathf.RoundToInt(Mathf.Sqrt(area / info.aspect)), 8, 36);
-                p.fill = Mathf.Min(0.88f, p.fill + 0.15f);    // denser, so the silhouette reads
+                p.fill = Mathf.Min(0.95f, p.fill + 0.10f);    // denser, so the silhouette reads
             }
 
             float iceCap = level > 1000 ? 0.28f : 0.2f;
@@ -180,9 +180,9 @@ namespace CircuitBreaker.Generation
             size = Mathf.Min(MaxSize, size + sizeAdd);
             p.minDepth += depthAdd;
             p.minWraps += sizeAdd * 2;
-            p.maxLen = Mathf.Min(8, p.maxLen + lenAdd);
-            p.maxBends = Mathf.Min(6, p.maxBends + bendAdd);
-            p.fill = Mathf.Min(0.86f, p.fill + fillAdd);
+            p.maxLen = Mathf.Min(30, p.maxLen + lenAdd);
+            p.maxBends = Mathf.Min(18, p.maxBends + bendAdd);
+            p.fill = Mathf.Min(0.95f, p.fill + fillAdd);
         }
     }
 }
