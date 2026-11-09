@@ -133,6 +133,7 @@ namespace CircuitBreaker.UI
                 _tick = Time.unscaledTime + 0.5f;
                 if (_getMoreSheet != null && _getMoreSheet.activeSelf) GetMoreTick?.Invoke();
                 if (_menuRoot != null && _menuRoot.activeSelf) MenuTick?.Invoke();
+                TickCoinTip();
             }
             UpdateToast();
             CenterMenu();

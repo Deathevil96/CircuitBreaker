@@ -29,6 +29,7 @@ namespace CircuitBreaker.UI
         private RectTransform _menuDailyFill;
         private Image _menuStreakIcon;
         private UiKit.UiButton _menuCoinAd;
+        private UiKit.Bob _menuCoinAdPulse;
         public event Action CoinAdClicked;
 
         private static readonly Color Cyan = CyberTheme.Arrow(0), Magenta = CyberTheme.Arrow(1), Lime = CyberTheme.Arrow(2), Amber = CyberTheme.Arrow(3), Orange = Theme.Hex("FF9A3D");
@@ -100,6 +101,16 @@ namespace CircuitBreaker.UI
             _menuCoins.horizontalOverflow = HorizontalWrapMode.Overflow;
             var coin = UiKit.Icon(cIn, "coin", 38, Cyan); UiKit.Size(coin.rectTransform, w: 38, h: 38);
             var gear = UiKit.MakeIconButton(top, "settings", () => SettingsClicked?.Invoke(), 72);
+
+            // ---- small free-coins ad button, right-aligned under the settings button ----
+            var adRow = UiKit.Row(col, 0, TextAnchor.MiddleRight);
+            UiKit.Size(adRow, h: 68);
+            var adFlex = UiKit.Rect("Flex", adRow); UiKit.Size(adFlex, flexW: 1);
+            _menuCoinAd = UiKit.MakeButton(adRow, "", ButtonStyle.Primary, () => { HideCoinTip(); CoinAdClicked?.Invoke(); }, "ad", 68, Theme.Micro);
+            UiKit.Size(_menuCoinAd.border, w: 250, h: 68);
+            BuildCoinTip();
+            _menuCoinAdPulse = _menuCoinAd.border.gameObject.AddComponent<UiKit.Bob>();     // gentle pulse while the ad is ready
+            _menuCoinAdPulse.amount = 0.045f; _menuCoinAdPulse.speed = 3f;
 
             // ---- hero title, left aligned ----
             _menuContent = col;
@@ -180,9 +191,6 @@ namespace CircuitBreaker.UI
             _menuOverloadSub = UiKit.Label(ocol, "", Theme.Micro, Theme.A(Theme.Bg, 0.78f), TextAnchor.MiddleLeft); UiKit.Size(_menuOverloadSub, h: 30);
             var oic = UiKit.Icon(orow, "overload", 48, Theme.Bg); UiKit.Size(oic.rectTransform, w: 48, h: 48);
 
-            // ---- free coins ad ----
-            _menuCoinAd = UiKit.MakeButton(col, "", ButtonStyle.Secondary, () => CoinAdClicked?.Invoke(), "ad", 96, Theme.Caption + 2);
-
             // ---- bottom: two uneven buttons ----
             var bottom = UiKit.Row(col, 18, TextAnchor.MiddleLeft, expand: true);
             UiKit.Size(bottom, h: 104);
@@ -227,11 +235,54 @@ namespace CircuitBreaker.UI
             _menuTopSpacer.preferredHeight = Mathf.Max(40f, (viewport - content) * 0.22f);
         }
 
+        // ---- tooltip under the ad button: at launch, then every 2 minutes on the main menu ----
+        private GameObject _coinTip;
+        private float _coinTipHideAt, _coinTipLastT, _coinTipAccum = CoinTipEvery - 1f;
+        private const float CoinTipEvery = 120f, CoinTipShown = 6f;
+
+        private void BuildCoinTip()
+        {
+            var bubble = UiKit.Rounded(_menuCoinAd.border.transform, Color.Lerp(Theme.Surface2, Theme.Accent, 0.35f), 30f);
+            bubble.name = "CoinTip";
+            _coinTip = bubble.gameObject;
+            var br = bubble.rectTransform;
+            br.anchorMin = br.anchorMax = new Vector2(1f, 0f);
+            br.pivot = new Vector2(1f, 1f);
+            br.anchoredPosition = new Vector2(0f, -10f);
+            br.sizeDelta = new Vector2(560f, 64f);
+            _coinTip.AddComponent<LayoutElement>().ignoreLayout = true;
+            var cv = _coinTip.AddComponent<Canvas>(); cv.overrideSorting = true; cv.sortingOrder = 20;     // above the title below
+            var l = UiKit.Label(br, "Watch an ad for +" + Economy.CoinAdAmount + " free coins", Theme.Micro, Theme.Text, TextAnchor.MiddleCenter, bold: true);
+            l.horizontalOverflow = HorizontalWrapMode.Overflow;
+            UiKit.Stretch(l.rectTransform, 16, 0, 16, 0);
+            _coinTip.SetActive(false);
+        }
+
+        public void HideCoinTip() { if (_coinTip != null) _coinTip.SetActive(false); }
+
+        private void TickCoinTip()
+        {
+            if (_coinTip == null) return;
+            float now = Time.unscaledTime;
+            float dt = Mathf.Clamp(now - _coinTipLastT, 0f, 1f); _coinTipLastT = now;
+            bool onMenu = _menuRoot.activeSelf && _stack.Count > 0 && _stack[_stack.Count - 1] == _menuRoot;
+            if (!onMenu) { HideCoinTip(); return; }
+            if (_coinTip.activeSelf && now >= _coinTipHideAt) HideCoinTip();
+            _coinTipAccum += dt;
+            if (!_coinTip.activeSelf && _coinTipAccum >= CoinTipEvery && _menuCoinAd.button.interactable)
+            {
+                _coinTip.SetActive(true);
+                _coinTipHideAt = now + CoinTipShown;
+                _coinTipAccum = 0f;
+            }
+        }
+
         public void SetCoinAd(string sub, bool enabled)
         {
             if (_menuCoinAd == null) return;
-            _menuCoinAd.SetText("Free coins  ·  +" + Economy.CoinAdAmount + "  ·  " + sub);
+            _menuCoinAd.SetText(sub);
             _menuCoinAd.SetEnabled(enabled);
+            if (_menuCoinAdPulse != null) { _menuCoinAdPulse.enabled = enabled; if (!enabled) _menuCoinAdPulse.transform.localScale = Vector3.one; }
         }
 
         public void HideMenu() => SetLayer(_menuRoot, false);

@@ -20,12 +20,12 @@ namespace CircuitBreaker.Core
         /// <summary>Set by PlayUpdate: reopens Google's update screen.</summary>
         public static Action RetryUpdate;
 
-        /// <summary>Release builds on Android must come from Google Play. Development builds and the Editor are exempt.</summary>
+        /// <summary>Production (AdMob production ids) builds on Android must come from Google Play. Test, QA and development builds and the Editor are exempt.</summary>
         public static bool SideloadBlocked
         {
             get
             {
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_ANDROID && !UNITY_EDITOR && CB_ADMOB_PRODUCTION
                 if (Debug.isDebugBuild) return false;
                 return Application.installerName != PlayInstaller;
 #else

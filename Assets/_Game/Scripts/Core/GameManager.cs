@@ -636,9 +636,9 @@ namespace CircuitBreaker.Core
         {
             var cst = Economy.CoinAdStatus(out int cd);
             enabled = cst == AdStatus.Ready;
-            return cst == AdStatus.Ready ? $"{Economy.CoinAdsLeftToday()} left today"
-                : cst == AdStatus.Cooldown ? $"Next in {cd / 60}:{cd % 60:00}"
-                : Economy.CoinAdsLeftToday() <= 0 ? "Back tomorrow" : "Ads unavailable";
+            return cst == AdStatus.Ready ? $"+{Economy.CoinAdAmount} coins"
+                : cst == AdStatus.Cooldown ? $"{cd / 60}:{cd % 60:00}"
+                : Economy.CoinAdsLeftToday() <= 0 ? "Tomorrow" : "No ad";
         }
 
         private void WatchCoinAd()
