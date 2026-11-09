@@ -99,17 +99,18 @@ namespace CircuitBreaker.Generation
                 // 1-2 easy, 3-4 medium, 5 shows off wrapping (arrows curling round each other).
                 switch (level)
                 {
-                    case 1: size = 5; p.minLen = 2; p.maxLen = 3; p.maxBends = 1; p.minDepth = 3; p.fill = 0.55f; p.hug = 0f;   p.straight = 0.62f; break;
-                    case 2: size = 5; p.minLen = 2; p.maxLen = 3; p.maxBends = 1; p.minDepth = 3; p.fill = 0.60f; p.hug = 0.1f; p.straight = 0.6f;  break;
-                    case 3: size = 6; p.minLen = 2; p.maxLen = 4; p.maxBends = 2; p.minDepth = 4; p.fill = 0.62f; p.hug = 0.3f; p.straight = 0.55f; break;
-                    case 4: size = 7; p.minLen = 3; p.maxLen = 4; p.maxBends = 2; p.minDepth = 5; p.fill = 0.65f; p.hug = 0.4f; p.straight = 0.5f; p.minWraps = 1; break;
-                    default: size = 8; p.minLen = 4; p.maxLen = 10; p.maxBends = 7; p.minDepth = 6; p.fill = 0.82f; p.hug = 1f;  p.straight = 0.25f; p.minWraps = 6; break;
+                    // Finer grids (lines sit closer together) with longer arrows, so the arrow count stays about the same.
+                    case 1: size = 7; p.minLen = 4; p.maxLen = 5; p.maxBends = 1; p.minDepth = 3; p.fill = 0.55f; p.hug = 0f;   p.straight = 0.62f; break;
+                    case 2: size = 7; p.minLen = 4; p.maxLen = 5; p.maxBends = 2; p.minDepth = 3; p.fill = 0.60f; p.hug = 0.1f; p.straight = 0.6f;  break;
+                    case 3: size = 8; p.minLen = 5; p.maxLen = 6; p.maxBends = 2; p.minDepth = 4; p.fill = 0.62f; p.hug = 0.3f; p.straight = 0.55f; break;
+                    case 4: size = 9; p.minLen = 6; p.maxLen = 7; p.maxBends = 3; p.minDepth = 5; p.fill = 0.65f; p.hug = 0.4f; p.straight = 0.5f; p.minWraps = 1; break;
+                    default: size = 10; p.minLen = 4; p.maxLen = 10; p.maxBends = 7; p.minDepth = 6; p.fill = 0.82f; p.hug = 1f;  p.straight = 0.25f; p.minWraps = 8; break;
                 }
             }
             else if (level <= 20)
             {
                 // Dense from level 6 on: high fill, strong hugging, a wrap target that grows with the board.
-                size = 8 + Mathf.FloorToInt((level - 6) * 2.99f / 14f);   // 8..10
+                size = 12 + Mathf.FloorToInt((level - 6) * 2.99f / 14f);  // 12..14 (the Hard levels add 2 more)
                 p.minLen = 5; p.maxLen = 14; p.maxBends = 9;
                 p.minDepth = 7 + (level - 6) / 5; p.fill = 0.88f;
                 p.hug = 1f; p.straight = 0.25f; p.minWraps = size;
