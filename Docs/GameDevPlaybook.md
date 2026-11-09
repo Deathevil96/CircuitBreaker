@@ -1,161 +1,148 @@
-# Mobile Game Playbook: Building and Shipping with Claude Code
+# Game Dev Playbook: Code, Optimization, Legal and Technical (2D and 3D, Unity + Claude Code)
 
-Based on a real project: **Arrow Breaker** (internal name Circuit Breaker), a tap-away arrow puzzle for Android, built solo with Claude Code and live on Google Play.
-
-> **Tip for your friend:** paste this whole file into Claude at the start of your project and say "Use this as our playbook."
+Apply to any Unity mobile game, 2D or 3D. Items marked (used) were done in a shipped game (Arrow Breaker, Android, live on Google Play). Items marked (recommended) are standard practice, not yet proven in that game. Do not assume the render pipeline: check the project (URP, HDRP, Built-in, 2D or 3D) before suggesting settings.
 
 ---
 
-## 1. Tech stack used
+## 1. Professional code practices
 
-| Area | Choice |
+- **Separate logic from Unity (used).** Core rules in plain C# classes (no MonoBehaviour): board, solver, economy, stats, save. Fast to unit test, easy to reason about, hard to break.
+- **One config file for every tunable number (used).** Rewards, costs, cooldowns, difficulty curves in one `Economy`/`Config` class. Balancing is then a one-file change.
+- **Versioned save data (used).** Keep app, save, generator and economy version numbers; migrate old saves instead of crashing. Never change a save format without a migration.
+- **Interfaces around third-party SDKs (used).** `IAdProvider` with a stub for Editor/tests and the real SDK for release. Same for analytics and IAP.
+- **Compile defines for platform and build type (used).** `UNITY_ANDROID && !UNITY_EDITOR`, plus custom ones (test ads vs production). Test builds can never ship test settings by accident.
+- **Self-test menu run before every release build (used).** 335 checks (rules, saves, economy, generators). Release build refuses to proceed if tests fail.
+- **Test sandbox for saves (used).** Tests write to a throwaway save prefix, never the real player data.
+- **Deterministic generation (used).** Procedural content from a seed + level index, validated by a solver so every level is winnable. No stored level files.
+- **Small commits, feature branches for risky work (used).** Keep release branch clean; IAP lived on its own branch until tested.
+- **Assembly definitions (recommended).** Split code into asmdefs (Core, Gameplay, UI, Platform). Faster compile, enforced dependencies.
+- **Events or small services, not singletons everywhere (recommended).** Avoid `FindObjectOfType` and hidden global state.
+- **No magic strings (recommended).** Constants or enums for event names, save keys, tags, layers.
+- **Fail loudly in dev, quietly in release (recommended).** Assertions and logs in dev; try/catch and safe defaults around save load and SDK calls in release.
+- **Strip logs in release (recommended).** `Debug.Log` costs time and allocations on device; wrap in a conditional attribute.
+
+## 2. Optimization techniques
+
+### CPU and memory
+- **Do heavy work off the main thread (used).** Level generation ran on a background thread; no frame hitch. (Unity API calls must stay on main thread; pass plain data.)
+- **Generate instead of store (used).** No large content files in the build.
+- **Build UI once, reuse (used).** Created in code through a shared helper kit; no per-frame rebuilds.
+- **Avoid per-frame allocations (recommended).** No `new` lists, LINQ, string concatenation, or boxing in `Update`. Cache components and references. Use `StringBuilder`, pre-sized lists, `NonAlloc` physics calls.
+- **Object pooling (recommended)** for bullets, effects, enemies, floating text, UI rows.
+- **Do not run logic every frame if it is not needed (recommended).** Timers, events, coroutines with cached waits, or lower-frequency ticks.
+- **Cap and set frame rate (recommended).** `Application.targetFrameRate` 60 (30 for idle menus), `vSyncCount = 0` on mobile.
+- **Garbage collector (recommended).** Use incremental GC; keep GC spikes out of gameplay.
+- **Profile before optimizing (recommended).** Unity Profiler, Memory Profiler, Frame Debugger, and profile on a real mid-range device, not the Editor.
+
+### Rendering (2D and 3D)
+- **Cheap visuals by design (used).** Thin line art, minimal palette, low overdraw.
+- **No ad or UI overdraw over gameplay (used).** One opaque reserved banner strip.
+- **Batching (recommended).** SRP Batcher (URP/HDRP), GPU instancing, static batching for static meshes, sprite atlases for 2D, shared materials.
+- **Reduce draw calls and overdraw (recommended).** Combine meshes, atlas textures, avoid large transparent layers, avoid full-screen post effects on mobile.
+- **3D specifics (recommended).** LODs, occlusion culling, baked lighting over realtime lights, 1 realtime light max on mobile, simple shadows or blob shadows, mesh and texture budgets per scene, avoid Standard-shader-heavy materials on low-end devices (use simple Lit/Unlit).
+- **Textures (recommended).** ASTC compression on Android, power-aware sizes, mipmaps for 3D, disable Read/Write, max size per platform, crunch compression for size.
+- **Audio (recommended).** Compressed Vorbis for music (streaming), ADPCM/short clips decompress-on-load for SFX, mono for SFX.
+
+### Build size and startup
+- **Only needed packages in the manifest (used).** Remove unused modules.
+- **IL2CPP + ARM64 + strip engine code (recommended).** Required for Play (64-bit). Use Managed Stripping Low/Medium and a `link.xml` for reflection-dependent SDKs.
+- **Addressables or asset bundles for big content (recommended).** Keep the base AAB small.
+- **Check the Editor build report (recommended).** Find the largest assets and delete or compress them.
+- **Android App Bundle (AAB) (used).** Play serves per-device splits.
+
+### Battery, heat, network
+- **Lower frame rate on static screens (recommended).**
+- **Batch analytics events (used by Firebase).** Do not fire network calls per frame.
+- **Do not load ads while gameplay is rendering heavy frames (recommended).** Preload at safe moments (menu, win screen).
+
+### Economy and game design optimization (used)
+- **Playtest the economy for loops.** Uncapped combo coins let a player buy refills to level 800; fixed with flat rewards per tier.
+- **Cooldowns and daily caps on rewarded ads (used).** A choice, not a nag.
+- **Interstitials: minimum gap, never in the first levels (used).**
+- **Scale lives with difficulty (used).**
+
+## 3. Legal checklist
+
+| Item | Details |
 |---|---|
-| Engine | Unity 6000.3.17, URP 2D, new Input System only |
-| Language | C# |
-| Editor control | UnityMCP (Claude drives the Unity Editor: scripts, scenes, menus, tests, builds) |
-| Ads | Google AdMob (Google Mobile Ads plugin 11.6.0 via OpenUPM), UMP consent |
-| Analytics | Firebase Analytics 14.1.0 + GA4, gated behind consent |
-| In-app purchases | Unity IAP 5.5.0 (kept on a separate `store` git branch until tested) |
-| Updates | Google Play in-app update API |
-| Source control | Git, `master` for release, feature branches for risky work |
-| Hosting | GitHub Pages for privacy policy, terms, app-ads.txt |
-| Store | Google Play Console (closed test, then production), AAB builds, upload keystore |
-| Browser automation | Claude in Chrome, used to fill and read Play Console / Firebase pages |
+| Privacy policy | Live public URL. Must name ads, analytics, purchases, data collected, retention, contact email, children's policy. Update whenever you add an SDK. |
+| Terms of service | Needed if you sell anything: purchase terms, refund policy, governing law, seller identity. |
+| Refund policy | Decide it in writing. Google refunds within 48 h regardless; consumed virtual currency is usually non-refundable after. |
+| Consent (GDPR/UK/EEA) | Use Google UMP (CMP) before any ad or analytics. Collect nothing until consent is given (used: Firebase collection OFF in manifest until UMP consent). |
+| COPPA / children | Decide the target audience honestly. If children are included, ads and analytics rules get much stricter (Families policy). |
+| Data Safety form (Play) | Must match what your SDKs really collect (AdMob, Firebase). Re-check after every SDK add or update. |
+| Ads declaration | Declare that the app contains ads. |
+| app-ads.txt | Host on your developer website root, link the site in Play listing; prevents ad fraud and lost revenue. |
+| Content rating | IARC questionnaire in Play Console; be truthful. |
+| Trademark and assets | Do not use another game's name, icon style, audio or art. Check fonts, SFX, music and AI-generated assets for licence terms; keep a credits and licence file. |
+| Open-source licences | List third-party SDK and package licences (Unity, Firebase, AdMob, plugins); include a credits screen if required. |
+| Developer identity | Play requires verified identity; personal accounts have a closed-test minimum (testers and days) before production. Business accounts need D-U-N-S. |
+| Tax and payments | Merchant account, bank and tax details needed before selling IAP. You own this; Claude must not fill it in. |
+| Store fees | Google takes 15% (first $1M) or 30%; some regions add billing fees. Price accordingly. |
+| Regional rules | Some regions restrict stores or loot-box style mechanics (hide shop in EEA/UK/CH if unsure; check local gambling-like rules). |
+| Gambling-style mechanics | Random paid rewards (loot boxes) need legal review per country. |
 
-## 2. How the work was done (workflow)
+## 4. Technical publishing checklist (Google Play)
 
-1. **Write a design doc first** (`GDD.md`): modes, economy, UI direction, monetization. Claude works far better with one source of truth.
-2. **Keep memory notes** so a new session knows the state (decisions, version codes, links, what the user still owns).
-3. **Build in small commits.** One feature, one commit, clear message. Easy to roll back.
-4. **Test after every change.** A built-in "Run Self Tests" menu (335 checks) runs before each release build.
-5. **Show work with screenshots.** An offscreen capture tool renders the UI to PNG so you can review without a device.
-6. **QA on a real phone** with a test APK (test ads, jump-to-level and coin cheats) installed via adb.
-7. **Release builds are one menu click**: run tests, bump version code, sign, produce AAB.
-8. **Ask Claude to review its own work** (`/code-review`, `/simplify`) before releases.
+**Project settings**
+- Unique package id (cannot change later)
+- Version name (human) and **version code** (integer, only goes up; bump only on release AAB builds, never on test APKs)
+- Min SDK per Unity default, Target SDK meeting current Play requirement
+- IL2CPP, ARM64 (and ARMv7 if you still support it), AAB output
+- Keystore: **upload keystore created once, backed up in two places** (loss means you cannot update the app). Opt in to Play App Signing.
+- Never commit the keystore or passwords to git (git-ignore it)
 
-## 3. Architecture choices that paid off
+**Dependencies**
+- Android Resolver (External Dependency Manager) resolved before build; generated local repos git-ignored
+- Check each SDK's required Android permissions and target SDK compatibility
+- Use real AdMob app id and ad unit ids only in the production build; Google test ids in dev
 
-- **Scene holds only a camera.** A `GameManager` boots at runtime and builds the board, UI, audio and ads from code. No scene or prefab merge conflicts, and Claude can edit everything as text.
-- **Core logic in plain C#** (Board, Solver, Economy, Stats, Achievements, Save). No Unity dependency means it is fast to test and hard to break.
-- **All tunable numbers in one file** (`Economy.cs`). Balancing the game is then a one-file change.
-- **Versioned data** (`BuildInfo`: app, save, generator, economy versions) so old saves do not crash new builds.
-- **Ads behind an interface** (`IAdProvider`): a stub for the Editor and tests, real AdMob for release. No ad SDK needed to develop.
-- **Procedural levels**: generated per level index, checked by a solver so every level is winnable, never stored on disk.
+**Store listing**
+- 512x512 icon, 1024x500 feature graphic, 2 to 8 phone screenshots (plus 7"/10" tablet if offered), short (80 char) and full description, category, tags, support email, privacy policy URL
+- Screenshots should show real gameplay, not mockups
 
-## 4. Optimization techniques
+**Testing path**
+1. Internal testing (fast, small team)
+2. Closed test (required tester count and duration for new personal accounts)
+3. Production with **staged rollout** (start 5 to 20%), watch crashes and ANRs in Android vitals
+4. Google review can take days; plan buffer
 
-**Performance**
-- Level generation runs **off the main thread**, so there is no hitch when a level loads.
-- Levels are generated on demand, so there are **no large level files** in the build.
-- UI built once in code with a shared helper kit (`UiKit`), not hundreds of scene objects.
-- Thin neon line graphics and a minimal palette: very cheap to draw, low overdraw.
-- Only one banner, in a reserved opaque strip, so no layout reflow or overdraw over gameplay.
-- Ad and analytics code compiled only where needed (`UNITY_ANDROID && !UNITY_EDITOR`, `CB_ADMOB` defines), keeping the Editor fast.
+**Release gate checklist**
+- [ ] Self-tests pass
+- [ ] Release build uses production ad ids, not test ids
+- [ ] Analytics and ads gated by consent
+- [ ] Version code is the next unused number
+- [ ] Data Safety, privacy policy and listing match the build
+- [ ] Tested on a real low-end and a real recent device
+- [ ] Release notes written (and a changelog file in the repo)
+- [ ] Crash reporting on (Firebase Crashlytics, recommended)
 
-**Build size and stability**
-- Only needed packages in the manifest; IAP kept on its own branch until ready.
-- Self-tests run before every release build to catch regressions.
-- Save sandboxing in tests so tests never touch real player data.
+**After launch**
+- In-app update API so players move to fixed builds (used)
+- Analytics events for the funnel: level start, win, fail, ad shown, purchase (used)
+- Optional: block sideloaded release builds that pirate or bypass ads (used, only when the production define is set)
+- Watch Android vitals (crash rate, ANR rate); bad vitals reduce store visibility
 
-**Economy and retention**
-- Playtesting found an exploit (uncapped combo coins let a player buy refills to level 800). Fixed with flat coin rewards per tier. **Always playtest the economy for loops.**
-- Hearts scale with difficulty; hardest tier is one-mistake "iron man".
-- Rewarded ads are capped (cooldowns, daily limit) so they stay a choice, not a nag.
-- Interstitials have a minimum gap and never appear in the first levels.
+## 5. Claude Code working rules (what made this efficient)
 
-## 5. What a mobile game should include
+- Write a design doc first (core loop, modes, economy, monetization, UI direction); keep it updated.
+- Keep memory notes of decisions, ids, links and "what the human still owns".
+- Claude must **never submit store forms, releases, purchases or legal declarations without the human's explicit OK**.
+- When Claude says "done", ask for proof: test count, screenshot, log line.
+- Run `/code-review` and `/simplify` before a release.
+- Unity Editor playing while unfocused can stall frames; write tests that call game logic directly.
+- Long Unity builds time out the MCP call; do not retry, wait for the output file.
+- Commit small. Use branches for risky features.
 
-**Gameplay**
-- A clear core loop learnable in under 30 seconds; first 5 levels forgiving
-- Difficulty tiers and milestone levels
-- Daily challenge, a free-play mode, and a score-attack mode for replay value
-- One-time tip sheets when a new mechanic first appears
-- Resume where you left off
-
-**Progression and economy**
-- Soft currency, boosters (hint, etc.), lives, achievements, stats
-- Every number tunable in one place
-
-**UX**
-- Minimal, consistent visual style; safe-area handling for notches
-- Settings, sound toggle, restart, clear fail and win screens
-- Rating prompt after the player is happy (after level 10, asked at most twice)
-
-**Monetization**
-- Rewarded ads for hints, coins, hearts (player chooses)
-- One banner, no forced ads beyond a rare interstitial
-- Optional coin packs (IAP), with a clear refund policy
-- Consent form (UMP) for EEA/UK before any ad or analytics
-
-**Live ops**
-- Analytics events: level_win, level_fail, hint_used, ad_rewarded, refill_used and so on
-- In-app update prompt, so players move to fixed builds
-- Optional: block sideloaded release builds
-
-## 6. Publishing checklist (Google Play)
-
-**Before you build**
-- [ ] Unique package id (cannot change later)
-- [ ] Upload keystore created, **backed up in two places**
-- [ ] Real AdMob app id and ad unit ids (test ids only in dev)
-- [ ] Version name and **version code** (see rule below)
-- [ ] 512px icon, feature graphic 1024x500, phone screenshots, short and full description
-
-**Legal and web**
-- [ ] Privacy policy URL (live, mentions ads, analytics, purchases)
-- [ ] Terms page if you sell anything
-- [ ] `app-ads.txt` on your developer website, listed in AdMob
-- [ ] Support email
-
-**Play Console forms**
-- [ ] Content rating questionnaire
-- [ ] **Data Safety** form (must match what ads and analytics really collect; update it when you add an SDK)
-- [ ] Ads declaration, target audience, news/COVID/government declarations
-- [ ] Merchant account if you sell in-app purchases (bank and tax details)
-
-**Release path**
-1. Internal or closed test with real testers (Google requires a minimum tester period for new personal accounts)
-2. Fix feedback, then promote to production
-3. Staged rollout, watch crashes and reviews
-4. Google review can take days; plan for it
-
-**Rules learned the hard way**
-- **Only release (AAB) builds bump the version code.** Version codes only go up, never reuse or waste them on test builds.
-- Do not commit test-ad settings to `master`.
-- Test APKs and Play AABs are different: a production build can refuse to run if not installed from Play.
-- Without the right billing mode file, Unity IAP uses a FAKE store, so test purchases on a real device.
-- Analytics stays off until consent is given.
-
-## 7. Claude Code tips that saved time
-
-- Give Claude **autonomy** for routine steps, but keep a rule that it must **never submit Play Console forms or releases without your OK**.
-- Keep a **memory file** for decisions, ids, links and "what I still own". New sessions resume instantly.
-- Keep a `Docs/Links.html` page with every console link in one place.
-- When Claude says "done", ask for proof: test count, screenshot, or log line.
-- Ask for **short, plain answers** if you skim; say what changed and what did not.
-- Unity play mode stalls when the Editor is unfocused. Design tests to call game logic directly instead of waiting on frames.
-- Long builds make the MCP call time out. That is normal; do not retry, wait for the output file.
-- Use branches for risky features (IAP) so the release branch stays clean.
-
-## 8. Suggested timeline for a new game
-
-| Stage | What to do |
-|---|---|
-| Day 1 | Pick one core mechanic, write the GDD, prototype the loop |
-| Week 1 | Procedural or hand-made levels, win/fail, save system, self-tests |
-| Week 2 | UI polish, sound, economy, tutorial tips |
-| Week 3 | Ads + consent, analytics, QA on a real phone |
-| Week 4 | Store assets, policy pages, closed test |
-| Then | Fix, staged production rollout, watch analytics, update every 2 to 3 weeks |
-
-## 9. Copy-paste starter prompt for your friend's Claude
+## 6. Starter prompt for a new project
 
 ```
-I am building a mobile game in Unity (or your engine). Use the attached playbook.
-First: write a one-page design doc (core loop, modes, economy, monetization).
-Rules: core logic in plain testable C#; all tunable numbers in one Economy file;
-ads behind an interface with a stub for the Editor; consent before ads/analytics;
-add a self-test menu and run it before each release; commit small; keep a memory
-file of decisions and ids; never submit store forms or releases without asking me;
-only release builds bump the version code. Explain things plainly and briefly.
+I am making a [2D/3D] mobile game in Unity ([URP/HDRP/Built-in]). Follow my playbook.
+First check the project's render pipeline and settings; do not assume.
+Rules: core logic in plain testable C#; all tunable numbers in one config file;
+third-party SDKs behind interfaces with stubs for the Editor; consent before ads or
+analytics; self-test menu run before each release; no per-frame allocations; profile
+on a real device before optimizing; pooling for spawned objects; versioned saves with
+migration; small commits; keep a memory file; never submit store forms or releases
+without my OK; only release builds bump the version code; give short, plain answers.
 ```
