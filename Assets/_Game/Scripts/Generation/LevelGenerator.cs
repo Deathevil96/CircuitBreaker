@@ -68,7 +68,7 @@ namespace CircuitBreaker.Generation
                 if (!level.InShape(start.x, start.y) || occ[start.x, start.y] != -1) { stall++; continue; }
 
                 int len = rng.Next(p.minLen, p.maxLen + 1);
-                var path = Walk(rng, occ, level, start, len, p.maxBends);
+                var path = Walk(rng, occ, level, start, len, p.maxBends, p.hug, p.straight);
                 if (path == null) { stall++; continue; }
 
                 if (!TryOrient(rng, occ, w, h, path, minRay, out Vector2Int dir))
@@ -94,7 +94,7 @@ namespace CircuitBreaker.Generation
             return level;
         }
 
-        private static List<Vector2Int> Walk(System.Random rng, int[,] occ, LevelData level, Vector2Int start, int len, int maxBends)
+        private static List<Vector2Int> Walk(System.Random rng, int[,] occ, LevelData level, Vector2Int start, int len, int maxBends, float hug, float straight)
         {
             int w = level.width, h = level.height;
             var path = new List<Vector2Int> { start };
@@ -107,10 +107,24 @@ namespace CircuitBreaker.Generation
             {
                 var options = new List<Vector2Int>(4);
                 // Straight-biased: try the current heading first most of the time.
-                bool preferStraight = rng.NextDouble() < 0.62;
+                bool preferStraight = rng.NextDouble() < straight;
                 if (preferStraight) options.Add(heading);
                 var order = new List<Vector2Int>(Dirs);
                 Shuffle(rng, order);
+                // Hugging: try the cells that touch the most other arrows first, so bodies curl round their neighbours.
+                if (rng.NextDouble() < hug)
+                {
+                    var scored = new List<KeyValuePair<int, Vector2Int>>(4);
+                    foreach (var d in order) scored.Add(new KeyValuePair<int, Vector2Int>(Contact(occ, w, h, cur + d, used), d));
+                    for (int si = 1; si < scored.Count; si++)     // stable insertion sort (List.Sort is not stable; boards must match on every device)
+                    {
+                        var item = scored[si]; int j = si - 1;
+                        while (j >= 0 && scored[j].Key < item.Key) { scored[j + 1] = scored[j]; j--; }
+                        scored[j + 1] = item;
+                    }
+                    order.Clear();
+                    foreach (var kv in scored) order.Add(kv.Value);
+                }
                 foreach (var d in order) if (!options.Contains(d)) options.Add(d);
 
                 bool moved = false;
@@ -129,6 +143,19 @@ namespace CircuitBreaker.Generation
                 if (!moved) break;
             }
             return path.Count >= 2 ? path : null;
+        }
+
+        /// <summary>How many of the cell's four neighbours are occupied by other arrows (the walk's own cells do not count).</summary>
+        private static int Contact(int[,] occ, int w, int h, Vector2Int c, HashSet<Vector2Int> own)
+        {
+            int n = 0;
+            foreach (var d in Dirs)
+            {
+                var q = c + d;
+                if (q.x < 0 || q.y < 0 || q.x >= w || q.y >= h || own.Contains(q)) continue;
+                if (occ[q.x, q.y] != -1) n++;
+            }
+            return n;
         }
 
         private static bool TryOrient(System.Random rng, int[,] occ, int w, int h, List<Vector2Int> path, int minRay, out Vector2Int dir)

@@ -46,6 +46,8 @@ namespace CircuitBreaker.Generation
         public int minLen, maxLen, maxBends;
         public int minDepth;
         public float fill;
+        public float hug;                // 0..1: chance an arrow step prefers a cell touching other arrows (arrows curl round each other)
+        public float straight;           // 0..1: chance an arrow step keeps its heading (lower = more winding)
         public float iceChance;
         public int keyPairs;
         public int hearts;               // 0 = no heart loss
@@ -92,36 +94,42 @@ namespace CircuitBreaker.Generation
 
             if (level <= 5)
             {
-                size = 5 + (level - 1) / 2;       // 5,5,6,6,6
-                p.minLen = 2; p.maxLen = 3; p.maxBends = level < 3 ? 0 : 1;
-                p.minDepth = level <= 2 ? 2 : 3; p.fill = 0.55f;
+                // Starters are already tangled: arrows curl round each other from the first board.
+                size = 6 + (level - 1) / 2;       // 6,6,7,7,7
+                p.minLen = 3; p.maxLen = 4 + level / 3; p.maxBends = level < 3 ? 2 : 3;
+                p.minDepth = 4 + level / 2; p.fill = 0.68f;
+                p.hug = 0.55f; p.straight = 0.5f;
             }
             else if (level <= 20)
             {
-                size = 7 + Mathf.FloorToInt((level - 6) * 2.99f / 14f);   // 7..9
-                p.minLen = 2; p.maxLen = 4; p.maxBends = level < 12 ? 1 : 2;
-                p.minDepth = 4 + (level - 6) / 7; p.fill = 0.60f;
+                size = 8 + Mathf.FloorToInt((level - 6) * 2.99f / 14f);   // 8..10
+                p.minLen = 3; p.maxLen = 5; p.maxBends = 3;
+                p.minDepth = 6 + (level - 6) / 5; p.fill = 0.70f;
+                p.hug = 0.65f; p.straight = 0.45f;
             }
             else if (level <= 60)
             {
-                size = 11 + Mathf.FloorToInt((level - 21) * 3.99f / 39f); // 11..14
-                p.minLen = 2; p.maxLen = 5; p.maxBends = 3;
-                p.minDepth = 7 + (level - 21) / 11; p.fill = 0.67f;
+                size = 12 + Mathf.FloorToInt((level - 21) * 3.99f / 39f); // 12..15
+                p.minLen = 3; p.maxLen = 6; p.maxBends = 4;
+                p.minDepth = 9 + (level - 21) / 10; p.fill = 0.72f;
+                p.hug = 0.7f; p.straight = 0.42f;
             }
             else if (level <= 150)
             {
-                size = 15 + Mathf.FloorToInt((level - 61) * 4.99f / 89f); // 15..19
-                p.minLen = 2; p.maxLen = 6; p.maxBends = 4;
-                p.minDepth = 11 + (level - 61) / 12; p.fill = 0.72f;
+                size = 16 + Mathf.FloorToInt((level - 61) * 4.99f / 89f); // 16..20
+                p.minLen = 3; p.maxLen = 7; p.maxBends = 5;
+                p.minDepth = 13 + (level - 61) / 11; p.fill = 0.75f;
+                p.hug = 0.75f; p.straight = 0.4f;
             }
             else
             {
                 // Keeps climbing to level 5000 instead of plateauing: board size, chain depth, arrow length, bends and density.
-                size = Mathf.Min(MaxSize, 21 + (level - 151) / 100);                  // 21 at 151, 26 by ~650
-                p.minLen = 2; p.maxLen = level < 600 ? 7 : 8;
-                p.maxBends = level < 1000 ? 4 : 5;
-                p.minDepth = Mathf.Min(34, 19 + (level - 151) / 90);                  // 19 -> 34 around level 1500
-                p.fill = Mathf.Min(0.78f, 0.74f + (level - 151) / 20000f);
+                size = Mathf.Min(MaxSize, 22 + (level - 151) / 100);                  // 22 at 151, 26 by ~550
+                p.minLen = 3; p.maxLen = 8;
+                p.maxBends = level < 1000 ? 5 : 6;
+                p.minDepth = Mathf.Min(38, 22 + (level - 151) / 80);                  // 22 -> 38 around level 1430
+                p.fill = Mathf.Min(0.80f, 0.76f + (level - 151) / 20000f);
+                p.hug = 0.8f; p.straight = 0.38f;
             }
 
             // Tougher tiers: bigger board, longer and more bent arrows, deeper dependency chains.
@@ -165,8 +173,8 @@ namespace CircuitBreaker.Generation
             size = Mathf.Min(MaxSize, size + sizeAdd);
             p.minDepth += depthAdd;
             p.maxLen = Mathf.Min(8, p.maxLen + lenAdd);
-            p.maxBends = Mathf.Min(5, p.maxBends + bendAdd);
-            p.fill = Mathf.Min(0.78f, p.fill + fillAdd);
+            p.maxBends = Mathf.Min(6, p.maxBends + bendAdd);
+            p.fill = Mathf.Min(0.82f, p.fill + fillAdd);
         }
     }
 }
