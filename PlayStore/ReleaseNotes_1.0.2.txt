@@ -1,0 +1,10 @@
+What's new in 1.0.2 (Google Play, max 500 characters)
+
+- Fairer coins: each level now pays a set amount for its difficulty
+- Free coins: watch an ad on the main menu for a coin bonus
+- Out of boosters? Watch an ad for a random one
+- Tougher tiers: Hard has 2 hearts, Ultra Hard 1, and Nightmare is now iron man
+- New Main menu button on the fail screen
+- Short guides for ice, key and lock arrows
+- New splash and a cleaner loading screen
+- Bug fixes and polish

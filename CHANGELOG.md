@@ -9,6 +9,16 @@ Version numbers live in `Assets/_Game/Scripts/Core/BuildInfo.cs`. Four numbers a
 | Generator version | what each level number produces | generator, catalog, or shape changes alter levels |
 | Economy version | rewards, caps, prices, ad rules | any number in `Economy.cs` changes |
 
+## 1.0.2 - release (branch master, save 3, gen 5, eco 3)
+- Economy v3: flat win coins by tier (20/30/40/50/60/100), +5 first try, no combo or perfect coins. One coin heart refill per app launch.
+- Free coins ad on the main menu (40 coins, 15 min cooldown, 5 per day) with a tooltip at launch and every 2 minutes. Random booster ad when every unlocked booster is empty.
+- Hearts: Hard 2, Super Hard 2, Ultra Hard 1, Nightmare iron man (one mistake ends the run, no continue). Fail screen gets a Main menu button that shows a full-screen ad on the way out (3 minute gap shared with the restart ad).
+- First-time tip sheets for ice (level 20) and key/lock arrows (level 35).
+- In-game update wall behind Google's update screen; production builds refuse to run unless installed from Google Play.
+- Rating prompt after level 10 (asked again 40 levels later if declined, then never).
+- Firebase events: refill_used, coin_balance, extract_used, ruler_used, fail_restart, fail_menu, update_wall, rate_prompt.
+- Loading screen fix and new splash with the Misal Interactive logo.
+
 ## 1.0.0 - release (branch master)
 Same game as 0.1.0 with all levels, minus the debug tools, level test and debug APK menu. Level window, loading screens and branding are unchanged.
 
