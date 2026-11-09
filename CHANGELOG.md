@@ -9,6 +9,13 @@ Version numbers live in `Assets/_Game/Scripts/Core/BuildInfo.cs`. Four numbers a
 | Generator version | what each level number produces | generator, catalog, or shape changes alter levels |
 | Economy version | rewards, caps, prices, ad rules | any number in `Economy.cs` changes |
 
+## 1.0.3 - hotfix (branch master, save 3, gen 8, eco 4)
+- New level generator (gen 8): every playable cell is covered by an arrow (no gaps), long arrows that curl round each other, finer grids on levels 1-20, levels 1-2 easy, 3-4 medium, 5 wrapped, 6 hard, 7+ dense. Level numbers produce different boards than 1.0.2, and Daily Run changes; saved half-finished boards are dropped once.
+- Grid dots are gone. Dots now appear along the cells an arrow slides across and stay until the level ends.
+- Level-clear finale: the shape lights up and sweeps away in a random direction. A random cheer in many languages replaces "Well done".
+- Free coins ad button: the amount and countdown text are back, the icon is bigger, the tooltip is visible, and the reward shows as a top notification.
+- Achievements no longer pay coins or hints (eco 4).
+
 ## 1.0.2 - release (branch master, save 3, gen 5, eco 3)
 - Economy v3: flat win coins by tier (20/30/40/50/60/100), +5 first try, no combo or perfect coins. One coin heart refill per app launch.
 - Free coins ad on the main menu (40 coins, 15 min cooldown, 5 per day) with a tooltip at launch and every 2 minutes. Random booster ad when every unlocked booster is empty.

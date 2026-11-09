@@ -4,7 +4,7 @@ namespace CircuitBreaker.Core
     public static class BuildInfo
     {
         /// <summary>Player-facing app version (keep PlayerSettings.bundleVersion in sync).</summary>
-        public const string AppVersion = "1.0.2";
+        public const string AppVersion = "1.0.3";
 
         /// <summary>Layout of the saved data. Bump when keys change and add a step in SaveSystem.Migrate.</summary>
         public const int SaveSchema = 3;
@@ -13,7 +13,7 @@ namespace CircuitBreaker.Core
         public const int GeneratorVersion = 8;
 
         /// <summary>Rewards, caps, prices, ad rules. Bump whenever Economy numbers change (useful for analytics comparisons).</summary>
-        public const int EconomyVersion = 3;
+        public const int EconomyVersion = 4;
 
         public const string ProductName = "Arrow Breaker";
         public const string StoreTitle = "Arrow Breaker: Circuit Puzzle";

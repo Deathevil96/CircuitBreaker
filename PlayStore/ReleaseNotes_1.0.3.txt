@@ -1,0 +1,8 @@
+What's new in 1.0.3 (Google Play, max 500 characters)
+
+- New, trickier levels: arrows now fill the whole board and curl round each other
+- Dots mark the path every arrow takes as it leaves
+- A new celebration when you clear a level, with encouraging words in many languages
+- Free coins button on the main menu shows its amount and countdown again
+- Achievements are now just for bragging rights, no coin rewards
+- Bug fixes and polish
