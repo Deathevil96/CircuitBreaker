@@ -109,14 +109,16 @@ namespace CircuitBreaker.EditorTools
             Check(LevelCatalog.DifficultyOf(150) == Difficulty.UltraHard, "L150 ultra hard (50 beats 30)");
             Check(LevelCatalog.DifficultyOf(200) == Difficulty.Nightmare, "L200 nightmare");
             Check(LevelCatalog.For(100).hearts == 1, "nightmare has 1 heart");
-            Check(LevelCatalog.For(60).hearts == 2 && LevelCatalog.For(20).hearts == 3, "super hard 2 hearts, hard 3");
-            Check(LevelCatalog.For(50).hearts == 2 && LevelCatalog.For(25).hearts == 3, "ultra hard 2 hearts, medium 3");
+            Check(LevelCatalog.For(60).hearts == 2 && LevelCatalog.For(20).hearts == 2 && LevelCatalog.For(25).hearts == 3, "super hard and hard 2 hearts, medium 3");
+            Check(LevelCatalog.For(50).hearts == 1 && LevelCatalog.For(150).hearts == 1, "ultra hard 1 heart");
             Check(Economy.RefillCostFor(25) == 50 && Economy.RefillCostFor(20) == 50, "refill 50 on easy tiers");
             Check(Economy.RefillCostFor(30) == 75 && Economy.RefillCostFor(50) == 75, "refill 75 on super and ultra hard");
             Check(Economy.RefillCostFor(100) == 120 && Economy.RefillCostFor(1000) == 300, "nightmare refill scales with level");
             Check(!Economy.AdContinueAllowed(100) && Economy.AdContinueAllowed(30) && Economy.AdContinueAllowed(8), "no ad continue on nightmare only");
             Check(Economy.AdContinuePerAttempt(30) && Economy.AdContinuePerAttempt(100) && !Economy.AdContinuePerAttempt(20), "ad per attempt from super hard up");
-            Check(Economy.BaseWinCoins(10) == 20 && Economy.BaseWinCoins(30) == 20 && Economy.BaseWinCoins(31) == 10 && Economy.BaseWinCoins(50) == 10 && Economy.BaseWinCoins(51) == 5, "base win coins taper");
+            Check(Economy.WinCoins(Difficulty.Easy) == 20 && Economy.WinCoins(Difficulty.Medium) == 30 && Economy.WinCoins(Difficulty.Hard) == 40
+                  && Economy.WinCoins(Difficulty.SuperHard) == 50 && Economy.WinCoins(Difficulty.UltraHard) == 60 && Economy.WinCoins(Difficulty.Nightmare) == 100, "flat win coins per tier");
+            Check(Economy.RefillsPerSession == 1 && Economy.CoinAdAmount == 40 && Economy.CoinAdCooldownSeconds == 900 && Economy.CoinAdsPerDay == 5, "refill once per launch, coin ad 40 / 15 min / 5 per day");
             Check(LevelCatalog.DifficultyOf(110) == Difficulty.Hard && LevelCatalog.DifficultyOf(1100) == Difficulty.Nightmare, "extra hard spikes after level 100");
             Check(LevelCatalog.For(3).hearts == 0 && LevelCatalog.For(7).hearts == 3, "tutorial free, then 3 hearts");
         }
@@ -191,14 +193,25 @@ namespace CircuitBreaker.EditorTools
             Check(Economy.BeginSession(d1.AddMinutes(25)) == "WELCOME BACK: +1 HINT", "restart gift after the guard");
 
             // tier rewards
-            Economy.TierReward(Difficulty.Nightmare, out int h, out int r, out int e, out int c);
-            Check(h == 3 && r == 2 && e == 1 && c == 150, "nightmare reward");
+            Economy.TierReward(Difficulty.Nightmare, out int h, out int r, out int e);
+            Check(h == 3 && r == 2 && e == 1, "nightmare reward");
             SaveSystem.SetStock("hint", 0);
-            var win = Economy.ResolveWin(20, true, 3);     // Hard level
-            Check(win.hints == 1, "hard level gives a hint", win.hints.ToString());
+            var win = Economy.ResolveWin(20, true, false);     // Hard level
+            Check(win.hints == 1 && win.coins == 40, "hard level gives a hint and 40 coins", win.coins.ToString());
+            Check(Economy.ResolveWin(25, false, true).coins == 35, "medium first try = 30 + 5");
             SaveSystem.SetStock("hint", 3);
-            var win2 = Economy.ResolveWin(40, true, 3);    // Hard again, hints full -> overflow coins
-            Check(win2.hints == 0 && win2.coins >= 10 + 6 + 10 + 25 + Economy.OverflowCoins("hint"), "hint overflow becomes coins", win2.coins.ToString());
+            var win2 = Economy.ResolveWin(40, true, false);    // Hard again, hints full -> overflow coins
+            Check(win2.hints == 0 && win2.coins == 40 + Economy.OverflowCoins("hint"), "hint overflow becomes coins", win2.coins.ToString());
+
+            // coin ad: cooldown + daily cap, booster roll
+            var t0 = new DateTime(2026, 11, 9, 10, 0, 0, DateTimeKind.Local);
+            int coinsBefore = SaveSystem.Coins;
+            Economy.GrantCoinAd(t0);
+            Check(SaveSystem.Coins == coinsBefore + 40 && Economy.CoinAdsLeftToday(t0) == 4, "coin ad pays 40, 4 left");
+            for (int i = 0; i < 4; i++) Economy.GrantCoinAd(t0.AddHours(i + 1));
+            Check(Economy.CoinAdsLeftToday(t0.AddHours(6)) == 0, "coin ad capped at 5 per day");
+            Check(Economy.CoinAdsLeftToday(t0.AddDays(1)) == 5, "coin ad cap resets next day");
+            Check(Economy.RollBooster(1, 0.99f) == "hint" && Economy.RollBooster(20, 0.7f) == "ruler" && Economy.RollBooster(20, 0.95f) == "extract", "booster roll weights and unlocks");
 
             Check(Economy.Price("hint", 1) < Economy.Price("hint", 200), "prices rise with level");
             Check(Economy.RulerChance(15) > Economy.RulerChance(300), "ruler drops get rarer");

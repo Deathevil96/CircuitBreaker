@@ -15,6 +15,8 @@ namespace CircuitBreaker.UI
         public int streak, coins;
         public string dailySub = "", dailyMonth = "", freeplaySub = "", overloadSub = "";
         public float dailyFraction;
+        public string coinAdSub = "";
+        public bool coinAdEnabled;
     }
 
     public partial class GameUI
@@ -26,6 +28,8 @@ namespace CircuitBreaker.UI
         private Text _menuContinueTitle, _menuContinueSub, _menuStreak, _menuCoins, _menuDailySub, _menuDailyMonth, _menuFreeSub, _menuOverloadSub;
         private RectTransform _menuDailyFill;
         private Image _menuStreakIcon;
+        private UiKit.UiButton _menuCoinAd;
+        public event Action CoinAdClicked;
 
         private static readonly Color Cyan = CyberTheme.Arrow(0), Magenta = CyberTheme.Arrow(1), Lime = CyberTheme.Arrow(2), Amber = CyberTheme.Arrow(3), Orange = Theme.Hex("FF9A3D");
 
@@ -176,6 +180,9 @@ namespace CircuitBreaker.UI
             _menuOverloadSub = UiKit.Label(ocol, "", Theme.Micro, Theme.A(Theme.Bg, 0.78f), TextAnchor.MiddleLeft); UiKit.Size(_menuOverloadSub, h: 30);
             var oic = UiKit.Icon(orow, "overload", 48, Theme.Bg); UiKit.Size(oic.rectTransform, w: 48, h: 48);
 
+            // ---- free coins ad ----
+            _menuCoinAd = UiKit.MakeButton(col, "", ButtonStyle.Secondary, () => CoinAdClicked?.Invoke(), "ad", 96, Theme.Caption + 2);
+
             // ---- bottom: two uneven buttons ----
             var bottom = UiKit.Row(col, 18, TextAnchor.MiddleLeft, expand: true);
             UiKit.Size(bottom, h: 104);
@@ -203,6 +210,7 @@ namespace CircuitBreaker.UI
             _menuDailyFill.anchorMax = new Vector2(Mathf.Clamp01(d.dailyFraction), 1f);
             _menuFreeSub.text = d.freeplaySub;
             _menuOverloadSub.text = d.overloadSub;
+            SetCoinAd(d.coinAdSub, d.coinAdEnabled);
             SetLayer(_menuRoot, true);
             _menuCenter = true;
         }
@@ -217,6 +225,13 @@ namespace CircuitBreaker.UI
             _menuCenter = false;
             float content = _menuContent.rect.height - _menuTopSpacer.preferredHeight;
             _menuTopSpacer.preferredHeight = Mathf.Max(40f, (viewport - content) * 0.22f);
+        }
+
+        public void SetCoinAd(string sub, bool enabled)
+        {
+            if (_menuCoinAd == null) return;
+            _menuCoinAd.SetText("Free coins  ·  +" + Economy.CoinAdAmount + "  ·  " + sub);
+            _menuCoinAd.SetEnabled(enabled);
         }
 
         public void HideMenu() => SetLayer(_menuRoot, false);

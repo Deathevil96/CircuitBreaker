@@ -127,9 +127,9 @@ namespace CircuitBreaker.Generation
             // Tougher tiers: bigger board, longer and more bent arrows, deeper dependency chains.
             switch (difficulty)
             {
-                case Difficulty.Hard: Bump(ref p, ref size, 2, 2, 1, 1, 0.04f); break;
+                case Difficulty.Hard: Bump(ref p, ref size, 2, 2, 1, 1, 0.04f); if (level > 5) p.hearts = 2; break;
                 case Difficulty.SuperHard: Bump(ref p, ref size, 3, 4, 1, 1, 0.05f); if (level > 5) p.hearts = 2; break;
-                case Difficulty.UltraHard: Bump(ref p, ref size, 4, 6, 2, 1, 0.06f); if (level > 5) p.hearts = 2; break;
+                case Difficulty.UltraHard: Bump(ref p, ref size, 4, 6, 2, 1, 0.06f); if (level > 5) p.hearts = 1; break;
                 case Difficulty.Nightmare: Bump(ref p, ref size, 5, 8, 2, 2, 0.08f); p.hearts = level <= 5 ? 0 : 1; break;
             }
 

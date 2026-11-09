@@ -77,6 +77,44 @@ namespace CircuitBreaker.UI
             _freeplaySheet = MakeSheet("Freeplay", out _freeBody);
             _ovIntroSheet = MakeSheet("OverloadIntro", out _ovIntroBody);
             _ovResultSheet = MakeSheet("OverloadResult", out _ovResultBody);
+            _updateSheet = MakeSheet("UpdateRequired", out _updateBody);
+            _rateSheet = MakeSheet("Rate", out _rateBody);
+        }
+
+        // =====================================================================
+        // Mandatory update (cannot be dismissed)
+        // =====================================================================
+        private GameObject _updateSheet;
+        private RectTransform _updateBody;
+        public event Action UpdateClicked;
+        public bool UpdateShown => _updateSheet != null && _updateSheet.activeSelf;
+
+        public void ShowWall(string title, string message, string button)
+        {
+            ClearChildren(_updateBody);
+            SheetTitle(_updateBody, title, message);
+            UiKit.Spacer(_updateBody, 6);
+            UiKit.MakeButton(_updateBody, button, ButtonStyle.Primary, () => UpdateClicked?.Invoke(), null, 108);
+            _updateSheet.transform.SetAsLastSibling();
+            SetLayer(_updateSheet, true);
+        }
+
+        public void HideWall() { if (UpdateShown) SetLayer(_updateSheet, false); }
+
+        // =====================================================================
+        // Rating prompt
+        // =====================================================================
+        private GameObject _rateSheet;
+        private RectTransform _rateBody;
+
+        public void ShowRate(Action onRate, Action onLater)
+        {
+            ClearChildren(_rateBody);
+            SheetTitle(_rateBody, "Enjoying Arrow Breaker?", "A quick rating on Google Play helps a small studio a lot.");
+            UiKit.Spacer(_rateBody, 6);
+            UiKit.MakeButton(_rateBody, "Rate on Google Play", ButtonStyle.Primary, () => { SetLayer(_rateSheet, false); onRate?.Invoke(); }, null, 108);
+            UiKit.MakeButton(_rateBody, "Not now", ButtonStyle.Ghost, () => { SetLayer(_rateSheet, false); onLater?.Invoke(); }, null, 80);
+            SetLayer(_rateSheet, true);
         }
 
         private void SheetTitle(Transform body, string title, string subtitle = null)
@@ -192,16 +230,20 @@ namespace CircuitBreaker.UI
         // =====================================================================
         // Fail
         // =====================================================================
-        public void ShowFail(int coins, int refillCost, string adLabel, bool adEnabled)
+        public void ShowFail(int coins, int refillCost, string adLabel, bool adEnabled, bool refillUsed = false, bool ironMan = false)
         {
             ClearChildren(_failBody);
-            SheetTitle(_failBody, "Out of hearts", "Continue this board or start it over.");
+            SheetTitle(_failBody, ironMan ? "Iron man down" : "Out of hearts", ironMan ? "One mistake ends an iron man run. No continues." : "Continue this board or start it over.");
             UiKit.Spacer(_failBody, 6);
-            var ad = UiKit.MakeButton(_failBody, adLabel, ButtonStyle.Primary, () => ContinueAdClicked?.Invoke(), "ad", 108);
-            ad.SetEnabled(adEnabled);
-            var refill = UiKit.MakeButton(_failBody, "Refill hearts  ·  " + refillCost + " coins", ButtonStyle.Secondary, () => RefillClicked?.Invoke(), "coin", 100);
-            refill.SetEnabled(coins >= refillCost);
-            UiKit.MakeButton(_failBody, "Restart level", ButtonStyle.Ghost, () => FailRestartClicked?.Invoke(), null, 80);
+            if (!ironMan)
+            {
+                var ad = UiKit.MakeButton(_failBody, adLabel, ButtonStyle.Primary, () => ContinueAdClicked?.Invoke(), "ad", 108);
+                ad.SetEnabled(adEnabled);
+                var refill = UiKit.MakeButton(_failBody, refillUsed ? "Refill used this session" : "Refill hearts  ·  " + refillCost + " coins", ButtonStyle.Secondary, () => RefillClicked?.Invoke(), "coin", 100);
+                refill.SetEnabled(!refillUsed && coins >= refillCost);
+            }
+            UiKit.MakeButton(_failBody, "Restart level", ironMan ? ButtonStyle.Primary : ButtonStyle.Ghost, () => FailRestartClicked?.Invoke(), null, ironMan ? 108 : 80);
+            UiKit.MakeButton(_failBody, "Main menu", ButtonStyle.Ghost, () => FailMenuClicked?.Invoke(), null, 80);
             SetLayer(_failSheet, true);
         }
 

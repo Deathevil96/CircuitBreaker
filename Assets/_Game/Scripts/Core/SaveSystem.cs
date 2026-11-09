@@ -65,6 +65,11 @@ namespace CircuitBreaker.Core
 
         // Timestamps are stored as UTC ticks in strings (PlayerPrefs has no 64-bit int).
         public static DateTime LastHintAdUtc { get => GetTime("lastHintAd"); set => SetTime("lastHintAd", value); }
+        public static int RateState { get => GetI("rateState", 0); set => SetI("rateState", value); }       // 0 never asked, 1 rated, 2 declined once, 3 declined twice
+        public static int RateAskLevel { get => GetI("rateAskLevel", 0); set => SetI("rateAskLevel", value); }
+        public static DateTime LastCoinAdUtc { get => GetTime("lastCoinAd"); set => SetTime("lastCoinAd", value); }
+        public static int CoinAdDay { get => GetI("coinAdDay", 0); set => SetI("coinAdDay", value); }
+        public static int CoinAdCount { get => GetI("coinAdCount", 0); set => SetI("coinAdCount", value); }
         public static DateTime LastSessionGiftUtc { get => GetTime("lastGift"); set => SetTime("lastGift", value); }
 
         private static DateTime GetTime(string key)

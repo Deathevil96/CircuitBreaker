@@ -25,6 +25,12 @@ namespace CircuitBreaker.Core
         public const int AdHintAmount = 2;
         public const int AdCooldownSeconds = 300;          // 5 minutes between hint ads (persisted across restarts)
         public const int ContinueAdsPerSession = 1;         // "+1 heart" ad, once per app launch
+        public const int RefillsPerSession = 1;             // coin refill of hearts, once per app launch
+
+        // Main-menu coin ad: flat reward, long cooldown, daily cap (so it never replaces winning levels as the coin source).
+        public const int CoinAdAmount = 40;
+        public const int CoinAdCooldownSeconds = 900;       // 15 minutes (persisted across restarts)
+        public const int CoinAdsPerDay = 5;
 
         // ----- free hints for returning players -----
         public const int DailyHint = 1;                    // first launch of each calendar day
@@ -33,9 +39,9 @@ namespace CircuitBreaker.Core
         // ----- coins -----
         public const int RefillCost = 50;
 
-        // Hard stays forgiving (3 hearts, free restart). Super/Ultra Hard have 2 hearts and a rewarded-ad continue per attempt.
-        // Nightmare has 1 heart, no ad continue, a coin-priced continue and a short wait before the free restart.
-        public const int NightmareRetrySeconds = 180;
+        // Hearts: Medium/Easy 3, Hard and Super Hard 2, Ultra Hard 1 (all can continue with an ad or a coin refill).
+        // Nightmare is "iron man": one mistake ends the run, no hearts shown, no ad continue, no coin refill, only a restart.
+        public const int InterstitialGapSeconds = 180;      // never two full-screen ads closer than this
         public static int RefillCostFor(int level)
         {
             switch (DifficultyOf(level))
@@ -47,8 +53,20 @@ namespace CircuitBreaker.Core
         }
         public static bool AdContinueAllowed(int level) => DifficultyOf(level) != Difficulty.Nightmare;
         public static bool AdContinuePerAttempt(int level) => DifficultyOf(level) >= Difficulty.SuperHard;   // others: once per app launch
-        /// <summary>Base coins for any win: generous at the start, tighter later so the hard tiers cost something.</summary>
-        public static int BaseWinCoins(int level) => level <= 30 ? 20 : level <= 50 ? 10 : 5;
+        /// <summary>Flat coins for a cleared level by tier. No combo or perfect bonus; only the first-try bonus on top.</summary>
+        public static int WinCoins(Difficulty d)
+        {
+            switch (d)
+            {
+                case Difficulty.Easy: return 20;
+                case Difficulty.Medium: return 30;
+                case Difficulty.Hard: return 40;
+                case Difficulty.SuperHard: return 50;
+                case Difficulty.UltraHard: return 60;
+                default: return 100;      // Nightmare
+            }
+        }
+        public const int FirstTryBonus = 5;
         public const int Level99Gift = 300;
         public static int Price(string id, int level)
         {
@@ -62,21 +80,21 @@ namespace CircuitBreaker.Core
         // ----- difficulty rewards: the tougher the tier, the better the (still capped) reward -----
         public static Difficulty DifficultyOf(int level) => LevelCatalog.DifficultyOf(level);
 
-        public static void TierReward(Difficulty d, out int hints, out int rulers, out int extracts, out int coins)
+        public static void TierReward(Difficulty d, out int hints, out int rulers, out int extracts)
         {
-            hints = rulers = extracts = coins = 0;
+            hints = rulers = extracts = 0;
             switch (d)
             {
-                case Difficulty.Hard: hints = 1; coins = 25; break;
-                case Difficulty.SuperHard: hints = 2; coins = 40; break;
-                case Difficulty.UltraHard: hints = 2; rulers = 1; extracts = 1; coins = 60; break;
-                case Difficulty.Nightmare: hints = 3; rulers = 2; extracts = 1; coins = 150; break;
+                case Difficulty.Hard: hints = 1; break;
+                case Difficulty.SuperHard: hints = 2; break;
+                case Difficulty.UltraHard: hints = 2; rulers = 1; extracts = 1; break;
+                case Difficulty.Nightmare: hints = 3; rulers = 2; extracts = 1; break;
             }
         }
 
         public static string TierRewardText(Difficulty d)
         {
-            TierReward(d, out int h, out int r, out int e, out int c);
+            TierReward(d, out int h, out int r, out int e);
             var parts = new List<string>();
             if (h > 0) parts.Add(h + " hint" + (h > 1 ? "s" : ""));
             if (r > 0) parts.Add(r + " ruler" + (r > 1 ? "s" : ""));
@@ -97,12 +115,12 @@ namespace CircuitBreaker.Core
         }
 
         /// <summary>Applies everything a cleared level earns. Call only for real (non-debug) wins.</summary>
-        public static Rewards ResolveWin(int level, bool perfect, int bestCombo)
+        public static Rewards ResolveWin(int level, bool perfect, bool firstTry)
         {
             var r = new Rewards { lines = new List<string>() };
             var diff = DifficultyOf(level);
-            TierReward(diff, out int th, out int tr, out int te, out int tc);
-            r.coins = BaseWinCoins(level) + 2 * bestCombo + (perfect ? 10 : 0) + tc;
+            TierReward(diff, out int th, out int tr, out int te);
+            r.coins = WinCoins(diff) + (firstTry ? FirstTryBonus : 0);
             if (level == 99 && !SaveSystem.GiftGiven("l99coins"))
             {
                 SaveSystem.SetGiftGiven("l99coins");
@@ -215,6 +233,58 @@ namespace CircuitBreaker.Core
                 return AdStatus.Cooldown;
             }
             return AdStatus.Ready;
+        }
+
+        // ----- main-menu coin ad (cooldown + daily cap) -----
+        public static int TodayKey(DateTime now) => now.Year * 10000 + now.Month * 100 + now.Day;
+
+        public static int CoinAdsLeftToday(DateTime? nowOverride = null)
+        {
+            int today = TodayKey(nowOverride ?? DateTime.Now);
+            return SaveSystem.CoinAdDay == today ? Mathf.Max(0, CoinAdsPerDay - SaveSystem.CoinAdCount) : CoinAdsPerDay;
+        }
+
+        public static AdStatus CoinAdStatus(out int cooldownSeconds, DateTime? nowOverride = null)
+        {
+            cooldownSeconds = 0;
+            if (CoinAdsLeftToday(nowOverride) <= 0) return AdStatus.Unavailable;
+            double since = ((nowOverride ?? DateTime.UtcNow) - SaveSystem.LastCoinAdUtc).TotalSeconds;
+            if (since < CoinAdCooldownSeconds)
+            {
+                cooldownSeconds = Mathf.CeilToInt((float)(CoinAdCooldownSeconds - since));
+                return AdStatus.Cooldown;
+            }
+            return Ads.AdService.RewardedReady ? AdStatus.Ready : AdStatus.Unavailable;
+        }
+
+        /// <summary>Call after the ad completed: pays the coins and starts the cooldown.</summary>
+        public static void GrantCoinAd(DateTime? nowOverride = null)
+        {
+            int today = TodayKey(nowOverride ?? DateTime.Now);
+            if (SaveSystem.CoinAdDay != today) { SaveSystem.CoinAdDay = today; SaveSystem.CoinAdCount = 0; }
+            SaveSystem.CoinAdCount++;
+            SaveSystem.LastCoinAdUtc = nowOverride ?? DateTime.UtcNow;
+            SaveSystem.Coins += CoinAdAmount;
+            SaveSystem.Save();
+        }
+
+        // ----- booster ad: only when every unlocked booster is at zero -----
+        public static bool AllBoostersEmpty(int progress)
+        {
+            if (SaveSystem.Stock("hint") > 0) return false;
+            if (progress >= ExtractUnlock && SaveSystem.Stock("extract") > 0) return false;
+            if (progress >= RulerUnlock && SaveSystem.Stock("ruler") > 0) return false;
+            return true;
+        }
+
+        /// <summary>Weighted roll over unlocked boosters: hint 60, ruler 30, extract 10.</summary>
+        public static string RollBooster(int progress, float roll01)
+        {
+            float hint = 60f, ruler = progress >= RulerUnlock ? 30f : 0f, extract = progress >= ExtractUnlock ? 10f : 0f;
+            float x = roll01 * (hint + ruler + extract);
+            if (x < hint) return "hint";
+            if (x < hint + ruler) return "ruler";
+            return "extract";
         }
 
         /// <summary>Buys one power-up with coins. Allowed slightly past the free cap.</summary>

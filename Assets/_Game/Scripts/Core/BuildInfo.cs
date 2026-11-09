@@ -13,7 +13,7 @@ namespace CircuitBreaker.Core
         public const int GeneratorVersion = 5;
 
         /// <summary>Rewards, caps, prices, ad rules. Bump whenever Economy numbers change (useful for analytics comparisons).</summary>
-        public const int EconomyVersion = 2;
+        public const int EconomyVersion = 3;
 
         public const string ProductName = "Arrow Breaker";
         public const string StoreTitle = "Arrow Breaker: Circuit Puzzle";

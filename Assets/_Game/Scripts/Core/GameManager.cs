@@ -59,9 +59,10 @@ namespace CircuitBreaker.Core
         private bool _outcomeShown;           // the win/fail screen for this board has been handled
 
         // session-wide ad pacing (reset every app launch)
+        private int _refillsUsed;                      // coin refills, per app launch
         private int _continueAdsUsed;                  // per app launch (easy tiers)
         private int _attemptAdsUsed;                    // per board attempt (Super/Ultra Hard)
-        private System.DateTime _nightmareRetryAt;
+        private float _lastInterstitialAt = -999f;
         private int _restartsThisSession, _restartAdTarget;
         private bool _restartAdShown;
         private string _getMoreId;
@@ -187,6 +188,9 @@ namespace CircuitBreaker.Core
             UI.LevelPicked += level => StartClassic(level);
             UI.RecordsClicked += () => UI.ShowRecords();
             UI.SettingsClicked += () => UI.ShowSettings();
+            UI.CoinAdClicked += WatchCoinAd;
+            UI.MenuTick += () => { string sub = CoinAdState(out bool on); UI.SetCoinAd(sub, on); };
+            UI.UpdateClicked += () => { if (UpdateGate.UpdatePending && !UpdateGate.SideloadBlocked && UpdateGate.RetryUpdate != null) UpdateGate.RetryUpdate(); else UpdateGate.OpenStore(); };
             UI.SoundChanged += on => { SaveSystem.Muted = !on; Sfx.Instance.Muted = !on; SaveSystem.Save(); };
             UI.VibrationChanged += on => { SaveSystem.Haptics = on; SaveSystem.Save(); };
             UI.GlowChanged += on => { SaveSystem.Glow = on; SaveSystem.Save(); ApplyGlow(); };
@@ -198,6 +202,7 @@ namespace CircuitBreaker.Core
             UI.ContinueAdClicked += ContinueWithAd;
             UI.RefillClicked += RefillHearts;
             UI.FailRestartClicked += OnFailRestart;
+            UI.FailMenuClicked += OnFailMenu;
             UI.GetMoreAdClicked += GetMoreWatchAd;
             UI.GetMoreCoinsClicked += GetMoreBuy;
             UI.GetMoreTick += RefreshGetMore;
@@ -264,6 +269,21 @@ namespace CircuitBreaker.Core
         }
 
         /// <summary>Android back button arrives as Escape. Overlays close first; in a board it leads to the menu.</summary>
+        private void UpdateWall()
+        {
+            bool sideload = UpdateGate.SideloadBlocked;
+            if (sideload || UpdateGate.UpdatePending)
+            {
+                if (!UI.UpdateShown)
+                {
+                    Platform.Analytics.Log("update_wall", ("kind", sideload ? "sideload" : "update"));
+                    if (sideload) UI.ShowWall("Install from Google Play", "This copy of Arrow Breaker did not come from Google Play. Install the official version to keep playing.", "Open Google Play");
+                    else UI.ShowWall("Update required", "A new version of Arrow Breaker is out. Update to keep playing.", "Update now");
+                }
+            }
+            else if (UI.UpdateShown) UI.HideWall();
+        }
+
         private void HandleBackKey()
         {
             if (AdService.IsAdShowing) return;
@@ -484,7 +504,7 @@ namespace CircuitBreaker.Core
             ApplyHeader();
             UI.SetOverloadMode(mode == GameMode.Overload);
             UI.SetTopButtonsVisible(true);
-            UI.SetHearts(Hearts, _maxHearts, Level.hearts == 0 || mode == GameMode.Overload);
+            ShowHearts();
             UI.SetCoins(SaveSystem.Coins);
             UI.HoldBanner("");
             UI.ShowCombo(0);
@@ -568,8 +588,32 @@ namespace CircuitBreaker.Core
             d.dailyMonth = cleared + " of " + days + " this month";
             d.dailyFraction = days > 0 ? cleared / (float)days : 0f;
             d.freeplaySub = "Pick a tier";
+            d.coinAdSub = CoinAdState(out d.coinAdEnabled);
             d.overloadSub = Stats.OverloadBest > 0 ? "Best " + Stats.OverloadBest.ToString("N0") : "Beat the clock";
             return d;
+        }
+
+        private static string CoinAdState(out bool enabled)
+        {
+            var cst = Economy.CoinAdStatus(out int cd);
+            enabled = cst == AdStatus.Ready;
+            return cst == AdStatus.Ready ? $"{Economy.CoinAdsLeftToday()} left today"
+                : cst == AdStatus.Cooldown ? $"Next in {cd / 60}:{cd % 60:00}"
+                : Economy.CoinAdsLeftToday() <= 0 ? "Back tomorrow" : "Ads unavailable";
+        }
+
+        private void WatchCoinAd()
+        {
+            if (Economy.CoinAdStatus(out _) != AdStatus.Ready) { UI.ShowMenu(BuildMenuData()); return; }
+            AdService.ShowRewarded("coins", ok =>
+            {
+                if (!ok) { UI.Toast("Ad not completed. No reward."); UI.ShowMenu(BuildMenuData()); return; }
+                Economy.GrantCoinAd();
+                Log($"AD REWARD: +{Economy.CoinAdAmount} coins, {Economy.CoinAdsLeftToday()} left today");
+                UI.SetCoins(SaveSystem.Coins);
+                UI.ShowMenu(BuildMenuData());
+                UI.Toast($"+{Economy.CoinAdAmount} coins", 2.5f);
+            });
         }
 
         private static string DescribeKey(string key)
@@ -614,17 +658,21 @@ namespace CircuitBreaker.Core
             RestartBoard(countAttempt: true);
         }
 
+        /// <summary>Fail screen -> main menu, with a full-screen ad on the way when the gap since the last one allows it.</summary>
+        private void OnFailMenu()
+        {
+            Platform.Analytics.Log("fail_menu", ("level", LevelIndex), ("tier", ((Difficulty)Level.difficulty).ToString()));
+            UI.HideSheets();
+            bool ad = SaveSystem.Progress >= 6 && Time.realtimeSinceStartup - _lastInterstitialAt >= Economy.InterstitialGapSeconds && AdService.InterstitialReady;
+            if (!ad) { OpenMenu(); return; }
+            _lastInterstitialAt = Time.realtimeSinceStartup;
+            InputLocked = true;
+            AdService.ShowInterstitial("fail_menu", () => { InputLocked = false; OpenMenu(); });
+        }
+
         private void OnFailRestart()
         {
-            if (Mode == GameMode.Classic && !_debugForced && Economy.DifficultyOf(LevelIndex) == Difficulty.Nightmare)
-            {
-                double wait = (_nightmareRetryAt - System.DateTime.UtcNow).TotalSeconds;
-                if (wait > 0)
-                {
-                    UI.Toast("Free retry in " + Mathf.CeilToInt((float)wait / 60f) + " min. Or continue with coins.", 3f);
-                    return;
-                }
-            }
+            Platform.Analytics.Log("fail_restart", ("level", LevelIndex), ("tier", ((Difficulty)Level.difficulty).ToString()));
             UI.HideSheets();
             RestartBoard(countAttempt: false);       // the failure already counted as an attempt
         }
@@ -645,6 +693,7 @@ namespace CircuitBreaker.Core
             if (showAd)
             {
                 _restartAdShown = true;
+                _lastInterstitialAt = Time.realtimeSinceStartup;
                 InputLocked = true;
                 AdService.ShowInterstitial("restart", () => { InputLocked = false; reset(); });
             }
@@ -655,6 +704,7 @@ namespace CircuitBreaker.Core
         private bool ShouldShowRestartAd()
         {
             if (_restartAdShown || _restartsThisSession < _restartAdTarget) return false;
+            if (Time.realtimeSinceStartup - _lastInterstitialAt < Economy.InterstitialGapSeconds) return false;
             if (Mode == GameMode.Classic && LevelIndex <= 5) return false;
             return AdService.InterstitialReady;
         }
@@ -707,6 +757,11 @@ namespace CircuitBreaker.Core
             if (Board.Model.Remaining <= 0) StartCoroutine(WinRoutine());
         }
 
+        /// <summary>Iron man (Nightmare): no hearts on screen, one mistake ends the run, no continue of any kind.</summary>
+        private bool IronMan => Level != null && Level.hearts > 0 && Mode != GameMode.Overload && (Difficulty)Level.difficulty == Difficulty.Nightmare;
+
+        private void ShowHearts() => UI.SetHearts(Hearts, _maxHearts, Level.hearts == 0 || Mode == GameMode.Overload || IronMan);
+
         private void OnCollided(ArrowDef arrow)
         {
             _combo = 0;
@@ -722,7 +777,7 @@ namespace CircuitBreaker.Core
             if (Level.hearts == 0) return;      // tutorial: bumps teach, they don't cost
             Hearts = Mathf.Max(0, Hearts - 1);
             _heartsLost++;
-            UI.SetHearts(Hearts, _maxHearts, false);
+            ShowHearts();
             SaveRun();
             if (Hearts <= 0) StartCoroutine(FailRoutine());
         }
@@ -789,7 +844,7 @@ namespace CircuitBreaker.Core
 
             bool firstTry = Stats.Attempts(LevelIndex) == 0;
             Stats.RegisterWin(LevelIndex, diff, perfect, firstTry);
-            var r = Economy.ResolveWin(LevelIndex, perfect, _bestCombo);
+            var r = Economy.ResolveWin(LevelIndex, perfect, firstTry);
             SaveSystem.BestCombo = _bestCombo;
             SaveSystem.Progress = LevelIndex + 1;
             Stats.ClearAttempts(LevelIndex);
@@ -797,6 +852,7 @@ namespace CircuitBreaker.Core
             if (firstTry) win.rows.Add(new KeyValuePair<string, string>("First attempt", "Yes"));
             win.rewards.AddRange(r.lines);
             if (DifficultyInfo.IsMilestone(diff)) win.rewards.Insert(0, DifficultyInfo.Name(diff) + " level cleared");
+            Platform.Analytics.Log("coin_balance", ("level", LevelIndex), ("earned", r.coins), ("balance", SaveSystem.Coins));
             Log($"REWARDS coins {r.coins}, hints +{r.hints}, rulers +{r.rulers}, extracts +{r.extracts} | firstTry {firstTry}, streak {SaveSystem.PerfectStreak}");
         }
 
@@ -835,9 +891,32 @@ namespace CircuitBreaker.Core
             win.rewards.Add("Freeplay does not give rewards");
         }
 
+        // Rating prompt: after 10 cleared levels, once more 40 levels later if declined, then never again.
+        private bool ShouldAskRating()
+        {
+            if (Mode != GameMode.Classic || _debugForced || _replay) return false;
+            int p = SaveSystem.Progress, s = SaveSystem.RateState;
+            if (s == 0) return p >= 11;
+            if (s == 2) return p >= SaveSystem.RateAskLevel + 40;
+            return false;
+        }
+
         private void OnNext()
         {
             UI.HideSheets();
+            if (ShouldAskRating())
+            {
+                SaveSystem.RateAskLevel = SaveSystem.Progress;
+                UI.ShowRate(
+                    () => { SaveSystem.RateState = 1; SaveSystem.Save(); Platform.Analytics.Log("rate_prompt", ("answer", "rate")); UpdateGate.OpenStore(); NextCore(); },
+                    () => { SaveSystem.RateState = SaveSystem.RateState == 0 ? 2 : 3; SaveSystem.Save(); Platform.Analytics.Log("rate_prompt", ("answer", "later")); NextCore(); });
+                return;
+            }
+            NextCore();
+        }
+
+        private void NextCore()
+        {
             switch (Mode)
             {
                 case GameMode.Classic: StartClassic(Mathf.Min(LevelIndex + 1, Mathf.Max(SaveSystem.Progress, 1)), null, _debugForced); break;
@@ -880,8 +959,6 @@ namespace CircuitBreaker.Core
             Stats.RegisterLoss();
             if (Mode == GameMode.Classic && !_replay && !_debugForced) Stats.AddAttempt(LevelIndex);
             RunSave.ClearFamily(RunSave.FamilyOf(BoardKey));
-            if (Mode == GameMode.Classic && !_debugForced && Economy.DifficultyOf(LevelIndex) == Difficulty.Nightmare)
-                _nightmareRetryAt = System.DateTime.UtcNow.AddSeconds(Economy.NightmareRetrySeconds);
             Platform.Analytics.Log("level_fail", ("level", LevelIndex), ("mode", Mode.ToString()), ("tier", ((Difficulty)Level.difficulty).ToString()), ("bumps", _bumps));
             Log($"FAIL {BoardKey}: out of hearts after {_bumps} bumps (win streak reset)");
             ShowFailModal();
@@ -897,7 +974,7 @@ namespace CircuitBreaker.Core
             else if (AdContinueUsedUp(classic)) { label = classic && Economy.AdContinuePerAttempt(LevelIndex) ? "Ad used on this try" : "Ad used this session"; enabled = false; }
             else if (!AdService.RewardedReady) { label = "Ad unavailable"; enabled = false; }
             else { label = classic && Economy.AdContinuePerAttempt(LevelIndex) ? "Watch ad  ·  +1 heart  ·  +1 hint" : "Watch ad  ·  +1 heart"; enabled = true; }
-            UI.ShowFail(SaveSystem.Coins, RefillCostNow(), label, enabled);
+            UI.ShowFail(SaveSystem.Coins, RefillCostNow(), label, enabled, _refillsUsed >= Economy.RefillsPerSession, IronMan);
         }
 
         private bool AdContinueUsedUp(bool classic) =>
@@ -908,7 +985,7 @@ namespace CircuitBreaker.Core
         private void ContinueWithAd()
         {
             bool classic = Mode == GameMode.Classic && !_debugForced;
-            if ((classic && !Economy.AdContinueAllowed(LevelIndex)) || AdContinueUsedUp(classic) || !AdService.RewardedReady) { ShowFailModal(); return; }
+            if (IronMan || (classic && !Economy.AdContinueAllowed(LevelIndex)) || AdContinueUsedUp(classic) || !AdService.RewardedReady) { ShowFailModal(); return; }
             AdService.ShowRewarded("continue_heart", ok =>
             {
                 if (!ok) { UI.Toast("Ad not completed. No reward."); ShowFailModal(); return; }
@@ -922,7 +999,11 @@ namespace CircuitBreaker.Core
         private void RefillHearts()
         {
             int cost = RefillCostNow();
+            if (IronMan) { ShowFailModal(); return; }
+            if (_refillsUsed >= Economy.RefillsPerSession) { ShowFailModal(); return; }
             if (SaveSystem.Coins < cost) return;
+            _refillsUsed++;
+            Platform.Analytics.Log("refill_used", ("level", LevelIndex), ("cost", cost), ("coins_before", SaveSystem.Coins), ("tier", ((Difficulty)Level.difficulty).ToString()));
             SaveSystem.Coins -= cost;
             SaveSystem.Save();
             UI.SetCoins(SaveSystem.Coins);
@@ -936,7 +1017,7 @@ namespace CircuitBreaker.Core
             _outcomeShown = false;
             InputLocked = false;
             UI.HideSheets();
-            UI.SetHearts(Hearts, _maxHearts, false);
+            ShowHearts();
             SaveRun();
         }
 
@@ -961,6 +1042,7 @@ namespace CircuitBreaker.Core
         // =====================================================================
         private void Update()
         {
+            UpdateWall();
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) HandleBackKey();
             if (!_ovRunning || Mode != GameMode.Overload || InputLocked || UI.ModalOpen) return;
             _ovTime -= Time.deltaTime * (1f + 0.12f * (_ovRound - 1));       // the clock speeds up every board
@@ -1055,6 +1137,7 @@ namespace CircuitBreaker.Core
             }
             if (SaveSystem.Stock("extract") <= 0) { OpenGetMore("extract"); return; }
             SaveSystem.TakeStock("extract");
+            Platform.Analytics.Log("extract_used", ("level", LevelIndex));
             SaveSystem.Save();
             Board.ExtractMode = true;
             UI.HoldBanner("Tap any arrow to extract it");
@@ -1067,6 +1150,7 @@ namespace CircuitBreaker.Core
             if (Board.RulerActive) { Board.HideRuler(); RefreshBoosters(); return; }
             if (SaveSystem.Stock("ruler") <= 0) { OpenGetMore("ruler"); return; }
             SaveSystem.TakeStock("ruler");
+            Platform.Analytics.Log("ruler_used", ("level", LevelIndex));
             SaveSystem.Save();
             Board.ShowRuler(15f);
             UI.Toast("Green: clear path. Red: blocked.", 3f);
@@ -1099,7 +1183,17 @@ namespace CircuitBreaker.Core
 
             string body, adLabel = null;
             bool adOn = false;
-            if (id == "hint")
+            if (Economy.AllBoostersEmpty(SaveSystem.Progress))
+            {
+                var st = Economy.HintAdStatus(out int cd);
+                if (st == AdStatus.Ready) { adLabel = "Watch ad  ·  random booster"; adOn = true; }
+                else if (st == AdStatus.Cooldown) adLabel = $"Next ad in {cd / 60}:{cd % 60:00}";
+                else adLabel = "Ads unavailable";
+                body = id == "hint" ? "Hints show the best next move. You also earn them from Hard levels and your daily bonus."
+                     : id == "ruler" ? "The ruler shows every arrow's path for 15 seconds. It drops from perfect clears and higher difficulties."
+                     : "Extract removes any arrow instantly. Earned from perfect streaks and the hardest levels.";
+            }
+            else if (id == "hint")
             {
                 var st = Economy.HintAdStatus(out int cd);
                 if (st == AdStatus.Ready) { adLabel = $"Watch ad  ·  +{Economy.AdHintAmount} hints"; adOn = true; }
@@ -1114,18 +1208,21 @@ namespace CircuitBreaker.Core
 
         private void GetMoreWatchAd()
         {
-            if (_getMoreId != "hint") return;
+            bool random = Economy.AllBoostersEmpty(SaveSystem.Progress);
+            if (_getMoreId != "hint" && !random) return;
             if (Economy.HintAdStatus(out _) != AdStatus.Ready) { RefreshGetMore(); return; }
-            AdService.ShowRewarded("hint", ok =>
+            AdService.ShowRewarded(random ? "booster" : "hint", ok =>
             {
                 if (!ok) { UI.Toast("Ad not completed. No reward."); RefreshGetMore(); return; }
                 SaveSystem.LastHintAdUtc = DateTime.UtcNow;
-                int added = SaveSystem.AddStock("hint", Economy.AdHintAmount, Economy.HintCap);
+                string got = random ? Economy.RollBooster(SaveSystem.Progress, UnityEngine.Random.value) : "hint";
+                int amount = got == "hint" ? Economy.AdHintAmount : 1;
+                int added = SaveSystem.AddStock(got, amount, Economy.Cap(got));
                 SaveSystem.Save();
-                Log($"AD REWARD: +{added} hint(s), next ad in {Economy.AdCooldownSeconds}s");
+                Log($"AD REWARD: +{added} {got}, next ad in {Economy.AdCooldownSeconds}s");
                 RefreshBoosters();
                 UI.CloseGetMore();
-                UI.Toast($"+{added} hints. Next ad in {Economy.AdCooldownSeconds / 60} min.", 3f);
+                UI.Toast($"+{added} {got}{(added > 1 ? "s" : "")}. Next ad in {Economy.AdCooldownSeconds / 60} min.", 3f);
             });
         }
 
@@ -1150,7 +1247,7 @@ namespace CircuitBreaker.Core
             SaveSystem.ResetAll();
             RunSave.ClearAll();
             Clock.Override = null;
-            _continueAdsUsed = 0;
+            _continueAdsUsed = 0; _refillsUsed = 0;
             Log("ALL PROGRESS RESET");
             Stats.RegisterSessionStart();
             StartClassic(1);

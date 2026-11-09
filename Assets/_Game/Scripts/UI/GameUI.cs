@@ -24,7 +24,7 @@ namespace CircuitBreaker.UI
         // ----- menu -----
         public event Action ContinueClicked, DailyClicked, FreeplayClicked, OverloadClicked, LevelsClicked, RecordsClicked, SettingsClicked;
         // ----- sheets -----
-        public event Action NextClicked, ReplayClicked, ContinueAdClicked, RefillClicked, FailRestartClicked;
+        public event Action NextClicked, ReplayClicked, ContinueAdClicked, RefillClicked, FailRestartClicked, FailMenuClicked, MenuTick;
         public event Action GetMoreAdClicked, GetMoreCoinsClicked, GetMoreTick;
         public event Action OverloadStartClicked, OverloadAgainClicked, OverloadMenuClicked, ResetProgressConfirmed;
         public event Action<int> LevelPicked, DailyDayPicked;
@@ -132,6 +132,7 @@ namespace CircuitBreaker.UI
             {
                 _tick = Time.unscaledTime + 0.5f;
                 if (_getMoreSheet != null && _getMoreSheet.activeSelf) GetMoreTick?.Invoke();
+                if (_menuRoot != null && _menuRoot.activeSelf) MenuTick?.Invoke();
             }
             UpdateToast();
             CenterMenu();
@@ -158,9 +159,11 @@ namespace CircuitBreaker.UI
         public void HideAllOverlays()
         {
             if (_open.Count > 0) _lastLayerClose = Time.unscaledTime;
+            bool keepUpdate = UpdateShown;
             foreach (var go in new List<GameObject>(_open)) if (go != null) go.SetActive(false);
             _open.Clear();
             _stack.Clear();
+            if (keepUpdate) SetLayer(_updateSheet, true);       // the update wall never goes away
         }
 
         /// <summary>Android back button / Escape. Returns true when an overlay consumed it.</summary>
@@ -169,7 +172,7 @@ namespace CircuitBreaker.UI
             if (_stack.Count == 0) return false;
             var top = _stack[_stack.Count - 1];
             // These screens are decisions, not detours: the player has to choose.
-            if (top == _winSheet || top == _failSheet || top == _ovResultSheet) return true;
+            if (top == _winSheet || top == _failSheet || top == _ovResultSheet || top == _updateSheet || top == _rateSheet) return true;
             if (top == _menuRoot)
             {
                 ShowConfirm("Exit Arrow Breaker?", "Your progress is saved.", "Exit", () => QuitRequested?.Invoke(), false);

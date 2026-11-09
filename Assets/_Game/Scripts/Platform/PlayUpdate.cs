@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using CircuitBreaker.Core;
 #if UNITY_ANDROID && !UNITY_EDITOR
 using Google.Play.AppUpdate;
 #endif
@@ -19,7 +20,7 @@ namespace CircuitBreaker.Platform
         private bool _busy;
         private float _lastCheck = -999f;
 
-        private void Start() => StartCoroutine(Check());
+        private void Start() { UpdateGate.RetryUpdate = () => { if (!_busy) StartCoroutine(Check()); }; StartCoroutine(Check()); }
 
         private void OnApplicationFocus(bool focus)
         {
@@ -48,10 +49,12 @@ namespace CircuitBreaker.Platform
             if (wanted && result.IsUpdateTypeAllowed(options))
             {
                 Debug.Log("[CB] update available: showing Google's update screen");
+                UpdateGate.UpdatePending = true;        // the in-game wall covers the game if Google's screen is dismissed
                 var request = _manager.StartUpdate(result, options);
                 yield return request;
                 Debug.Log("[CB] update screen closed: " + request.Error);
             }
+            else if (!wanted) UpdateGate.UpdatePending = false;
             _lastCheck = Time.unscaledTime;
             _busy = false;
         }
