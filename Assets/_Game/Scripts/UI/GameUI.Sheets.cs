@@ -85,10 +85,54 @@ namespace CircuitBreaker.UI
         private GameObject _tipSheet;
         private RectTransform _tipBody;
 
-        public void ShowTip(string title, string body, Action onClose)
+        private static void TipChip(Transform row, string text, Color fill, Color ink)
+        {
+            var chip = UiKit.Img(row, fill, ProcSprites.Circle);
+            chip.raycastTarget = false;
+            UiKit.Size(chip.rectTransform, w: 96, h: 96);
+            var l = UiKit.Label(chip.rectTransform, text, 48, ink, TextAnchor.MiddleCenter, bold: true);
+            UiKit.Stretch(l.rectTransform);
+        }
+
+        private static void TipSprite(Transform row, Sprite sprite, Color tint)
+        {
+            var img = UiKit.Img(row, tint, sprite);
+            img.raycastTarget = false;
+            UiKit.Size(img.rectTransform, w: 96, h: 96);
+        }
+
+        private static void TipStep(Transform row, string text)
+        {
+            var l = UiKit.Label(row, text, 44, Theme.Dim, TextAnchor.MiddleCenter, bold: true);
+            UiKit.Size(l, w: 56, h: 96);
+        }
+
+        /// <summary>kind 1 = ice countdown picture, kind 2 = key opens lock picture.</summary>
+        public void ShowTip(string title, string body, Action onClose, int kind = 0)
         {
             ClearChildren(_tipBody);
-            SheetTitle(_tipBody, title, body);
+            SheetTitle(_tipBody, title);
+            if (kind != 0)
+            {
+                UiKit.Spacer(_tipBody, 4);
+                var row = UiKit.Row(_tipBody, 8, TextAnchor.MiddleCenter);
+                UiKit.Size(row, h: 104);
+                if (kind == 1)
+                {
+                    TipChip(row, "2", CyberTheme.IceColor, Theme.Bg); TipStep(row, "›");
+                    TipChip(row, "1", CyberTheme.IceColor, Theme.Bg); TipStep(row, "›");
+                    TipChip(row, "0", Theme.Text, Theme.Bg);
+                }
+                else
+                {
+                    TipSprite(row, ProcSprites.Ring, CyberTheme.Hint); TipStep(row, "›");
+                    TipSprite(row, ProcSprites.Lock, CyberTheme.LockColor); TipStep(row, "›");
+                    TipSprite(row, ProcSprites.Lock, CyberTheme.Hint);
+                }
+                UiKit.Spacer(_tipBody, 4);
+            }
+            var text = UiKit.Label(_tipBody, body, Theme.Body - 3, Theme.Dim, TextAnchor.MiddleCenter, wrap: true);
+            UiKit.Size(text, minH: 40);
             UiKit.Spacer(_tipBody, 6);
             UiKit.MakeButton(_tipBody, "Got it", ButtonStyle.Primary, () => { SetLayer(_tipSheet, false); onClose?.Invoke(); }, null, 104);
             SetLayer(_tipSheet, true);

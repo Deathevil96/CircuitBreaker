@@ -588,9 +588,9 @@ namespace CircuitBreaker.Core
             SaveSystem.SetGiftGiven(id);
             SaveSystem.Save();
             if (id == "tipIce")
-                UI.ShowTip("New: ice arrows", "An ice arrow is frozen and shows a number. Every time any other arrow escapes, the number drops by 1. At 0 it thaws and you can move it. Tapping a frozen arrow costs nothing.", ShowNextTip);
+                UI.ShowTip("New: ice arrows", "An ice arrow is frozen and shows a number. Every time any other arrow escapes, the number drops by 1. At 0 it thaws and you can move it. Tapping a frozen arrow costs nothing.", ShowNextTip, 1);
             else
-                UI.ShowTip("New: keys and locks", "An arrow with a glowing ring is a key. An arrow with a padlock is locked and cannot move. Send the key arrow out and the padlocked one opens. Tapping a locked arrow costs nothing.", ShowNextTip);
+                UI.ShowTip("New: keys and locks", "An arrow with a glowing ring is a key. An arrow with a padlock is locked and cannot move. Send the key arrow out and the padlocked one opens. Tapping a locked arrow costs nothing.", ShowNextTip, 2);
         }
 
         // =====================================================================
