@@ -45,6 +45,7 @@ namespace CircuitBreaker.Generation
         public int width, height;
         public int minLen, maxLen, maxBends;
         public int minDepth;
+        public int minWraps;             // target number of arrows curling round another arrow (see LevelGenerator.CountWraps)
         public float fill;
         public float hug;                // 0..1: chance an arrow step prefers a cell touching other arrows (arrows curl round each other)
         public float straight;           // 0..1: chance an arrow step keeps its heading (lower = more winding)
@@ -75,12 +76,13 @@ namespace CircuitBreaker.Generation
         public static Difficulty DifficultyOf(int level)
         {
             level = Mathf.Max(1, level);
+            if (level == 6) return Difficulty.Hard;                          // the first spike: levels 1-2 easy, 3-4 medium, 5 wrapped, 6 hard
             if (level % 100 == 0) return Difficulty.Nightmare;
             if (level % 50 == 0) return Difficulty.UltraHard;
             if (level % 30 == 0) return Difficulty.SuperHard;
             if (level % 20 == 0) return Difficulty.Hard;
             if (level > 100 && level % 10 == 0) return Difficulty.Hard;     // more spikes once the player is experienced
-            return level <= 20 ? Difficulty.Easy : Difficulty.Medium;
+            return level <= 2 ? Difficulty.Easy : Difficulty.Medium;      // 1-2 easy, everything after is at least medium
         }
 
         public static LevelParams For(int level) => For(LevelSpec.Classic(level));
@@ -94,32 +96,37 @@ namespace CircuitBreaker.Generation
 
             if (level <= 5)
             {
-                // Starters are already tangled: arrows curl round each other from the first board.
-                size = 6 + (level - 1) / 2;       // 6,6,7,7,7
-                p.minLen = 3; p.maxLen = 4 + level / 3; p.maxBends = level < 3 ? 2 : 3;
-                p.minDepth = 4 + level / 2; p.fill = 0.68f;
-                p.hug = 0.55f; p.straight = 0.5f;
+                // 1-2 easy, 3-4 medium, 5 shows off wrapping (arrows curling round each other).
+                switch (level)
+                {
+                    case 1: size = 5; p.minLen = 2; p.maxLen = 3; p.maxBends = 1; p.minDepth = 3; p.fill = 0.55f; p.hug = 0f;   p.straight = 0.62f; break;
+                    case 2: size = 5; p.minLen = 2; p.maxLen = 3; p.maxBends = 1; p.minDepth = 3; p.fill = 0.60f; p.hug = 0.1f; p.straight = 0.6f;  break;
+                    case 3: size = 6; p.minLen = 2; p.maxLen = 4; p.maxBends = 2; p.minDepth = 4; p.fill = 0.62f; p.hug = 0.3f; p.straight = 0.55f; break;
+                    case 4: size = 7; p.minLen = 3; p.maxLen = 4; p.maxBends = 2; p.minDepth = 5; p.fill = 0.65f; p.hug = 0.4f; p.straight = 0.5f; p.minWraps = 1; break;
+                    default: size = 8; p.minLen = 3; p.maxLen = 6; p.maxBends = 4; p.minDepth = 6; p.fill = 0.72f; p.hug = 1f;  p.straight = 0.3f; p.minWraps = 5; break;
+                }
             }
             else if (level <= 20)
             {
+                // Dense from level 6 on: high fill, strong hugging, a wrap target that grows with the board.
                 size = 8 + Mathf.FloorToInt((level - 6) * 2.99f / 14f);   // 8..10
-                p.minLen = 3; p.maxLen = 5; p.maxBends = 3;
-                p.minDepth = 6 + (level - 6) / 5; p.fill = 0.70f;
-                p.hug = 0.65f; p.straight = 0.45f;
+                p.minLen = 3; p.maxLen = 6; p.maxBends = 4;
+                p.minDepth = 7 + (level - 6) / 5; p.fill = 0.76f;
+                p.hug = 0.9f; p.straight = 0.35f; p.minWraps = size;
             }
             else if (level <= 60)
             {
                 size = 12 + Mathf.FloorToInt((level - 21) * 3.99f / 39f); // 12..15
-                p.minLen = 3; p.maxLen = 6; p.maxBends = 4;
-                p.minDepth = 9 + (level - 21) / 10; p.fill = 0.72f;
-                p.hug = 0.7f; p.straight = 0.42f;
+                p.minLen = 3; p.maxLen = 7; p.maxBends = 5;
+                p.minDepth = 9 + (level - 21) / 10; p.fill = 0.78f;
+                p.hug = 0.9f; p.straight = 0.33f; p.minWraps = size * 2;
             }
             else if (level <= 150)
             {
                 size = 16 + Mathf.FloorToInt((level - 61) * 4.99f / 89f); // 16..20
-                p.minLen = 3; p.maxLen = 7; p.maxBends = 5;
-                p.minDepth = 13 + (level - 61) / 11; p.fill = 0.75f;
-                p.hug = 0.75f; p.straight = 0.4f;
+                p.minLen = 3; p.maxLen = 8; p.maxBends = 5;
+                p.minDepth = 13 + (level - 61) / 11; p.fill = 0.80f;
+                p.hug = 0.92f; p.straight = 0.32f; p.minWraps = size * 3;
             }
             else
             {
@@ -128,8 +135,8 @@ namespace CircuitBreaker.Generation
                 p.minLen = 3; p.maxLen = 8;
                 p.maxBends = level < 1000 ? 5 : 6;
                 p.minDepth = Mathf.Min(38, 22 + (level - 151) / 80);                  // 22 -> 38 around level 1430
-                p.fill = Mathf.Min(0.80f, 0.76f + (level - 151) / 20000f);
-                p.hug = 0.8f; p.straight = 0.38f;
+                p.fill = Mathf.Min(0.84f, 0.80f + (level - 151) / 20000f);
+                p.hug = 0.95f; p.straight = 0.3f; p.minWraps = size * 3;
             }
 
             // Tougher tiers: bigger board, longer and more bent arrows, deeper dependency chains.
@@ -172,9 +179,10 @@ namespace CircuitBreaker.Generation
         {
             size = Mathf.Min(MaxSize, size + sizeAdd);
             p.minDepth += depthAdd;
+            p.minWraps += sizeAdd * 2;
             p.maxLen = Mathf.Min(8, p.maxLen + lenAdd);
             p.maxBends = Mathf.Min(6, p.maxBends + bendAdd);
-            p.fill = Mathf.Min(0.82f, p.fill + fillAdd);
+            p.fill = Mathf.Min(0.86f, p.fill + fillAdd);
         }
     }
 }

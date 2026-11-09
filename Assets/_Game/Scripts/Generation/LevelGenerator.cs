@@ -25,14 +25,17 @@ namespace CircuitBreaker.Generation
         {
             var p = LevelCatalog.For(spec);
             int cells = p.width * p.height;
-            int maxAttempts = cells <= 200 ? 14 : cells <= 450 ? 8 : cells <= 800 ? 5 : 3;
+            int maxAttempts = cells <= 200 ? 24 : cells <= 450 ? 10 : cells <= 800 ? 5 : 3;
             LevelData best = null;
+            int bestScore = int.MinValue;
             for (int attempt = 0; attempt < maxAttempts; attempt++)
             {
                 int seed = spec.index * 7919 + attempt * 104729 + 17 + spec.salt * 1000003;
                 var candidate = BuildOnce(spec.index, p, seed);
-                if (best == null || candidate.depth > best.depth) best = candidate;
-                if (candidate.depth >= p.minDepth) break;
+                // Fewest missed targets wins (depth misses count triple); beyond the targets, deeper and more wrapped is a small bonus.
+                int score = -(3 * Mathf.Max(0, p.minDepth - candidate.depth) + Mathf.Max(0, p.minWraps - candidate.wraps)) * 100 + candidate.depth + candidate.wraps;
+                if (best == null || score > bestScore) { best = candidate; bestScore = score; }
+                if (candidate.depth >= p.minDepth && candidate.wraps >= p.minWraps) break;
             }
             best.difficulty = (int)p.difficulty;
             return best;
@@ -91,6 +94,7 @@ namespace CircuitBreaker.Generation
             Solver.Solve(level, out level.depth);
             AssignMechanics(level, p, rng);
             Solver.Solve(level, out level.depth);
+            level.wraps = CountWraps(level);
             return level;
         }
 
@@ -143,6 +147,30 @@ namespace CircuitBreaker.Generation
                 if (!moved) break;
             }
             return path.Count >= 2 ? path : null;
+        }
+
+        /// <summary>
+        /// Counts bends whose inner corner is held by a different arrow: that arrow is curled round the other one.
+        /// This is what makes boards look tangled, so the generator keeps the candidate with the most.
+        /// </summary>
+        public static int CountWraps(LevelData level)
+        {
+            var owner = new int[level.width, level.height];
+            for (int x = 0; x < level.width; x++) for (int y = 0; y < level.height; y++) owner[x, y] = -1;
+            foreach (var a in level.arrows) foreach (var c in a.cells) owner[c.x, c.y] = a.id;
+            int wraps = 0;
+            foreach (var a in level.arrows)
+                for (int i = 1; i < a.cells.Count - 1; i++)
+                {
+                    var d1 = a.cells[i] - a.cells[i - 1];
+                    var d2 = a.cells[i + 1] - a.cells[i];
+                    if (d1 == d2) continue;
+                    var inner = a.cells[i - 1] + d2;
+                    if (inner.x < 0 || inner.y < 0 || inner.x >= level.width || inner.y >= level.height) continue;
+                    int o = owner[inner.x, inner.y];
+                    if (o != -1 && o != a.id) wraps++;
+                }
+            return wraps;
         }
 
         /// <summary>How many of the cell's four neighbours are occupied by other arrows (the walk's own cells do not count).</summary>

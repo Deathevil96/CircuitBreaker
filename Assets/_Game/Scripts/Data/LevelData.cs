@@ -28,6 +28,7 @@ namespace CircuitBreaker.Data
         public int height;
         public int hearts;      // 0 = no heart loss (tutorial)
         public int depth;       // solver wave count
+        public int wraps;       // bends whose inner corner holds another arrow (arrows curling round each other)
         public int seed;
         public int difficulty;   // Generation.Difficulty as int
         public string shape;     // silhouette name (Heart, Star, ...)

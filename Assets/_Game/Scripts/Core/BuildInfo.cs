@@ -10,7 +10,7 @@ namespace CircuitBreaker.Core
         public const int SaveSchema = 3;
 
         /// <summary>Level generation output. Bump whenever the generator, catalog or shapes change what a level number produces.</summary>
-        public const int GeneratorVersion = 6;
+        public const int GeneratorVersion = 7;
 
         /// <summary>Rewards, caps, prices, ad rules. Bump whenever Economy numbers change (useful for analytics comparisons).</summary>
         public const int EconomyVersion = 3;
