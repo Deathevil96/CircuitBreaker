@@ -272,7 +272,7 @@ namespace CircuitBreaker.EditorTools
                 Achievements.Evaluate();
                 Check(unlocked.Contains("lvl10"), "clearing level 10 unlocks the level achievement");
                 Check(unlocked.Contains("ft10"), "first-attempt win on level 10 unlocks its award");
-                Check(SaveSystem.Coins > coinsBefore, "achievement rewards coins");
+                Check(SaveSystem.Coins == coinsBefore, "achievements give no coins");
                 unlocked.Clear();
                 Achievements.Evaluate();
                 Check(unlocked.Count == 0, "achievements unlock only once");

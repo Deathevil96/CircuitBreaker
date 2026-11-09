@@ -108,6 +108,7 @@ namespace CircuitBreaker.UI
             var adFlex = UiKit.Rect("Flex", adRow); UiKit.Size(adFlex, flexW: 1);
             _menuCoinAd = UiKit.MakeButton(adRow, "", ButtonStyle.Primary, () => { HideCoinTip(); CoinAdClicked?.Invoke(); }, "ad", 68, Theme.Micro);
             UiKit.Size(_menuCoinAd.border, w: 250, h: 68);
+            if (_menuCoinAd.icon != null) UiKit.Size(_menuCoinAd.icon.rectTransform, w: 46, h: 46);      // default icon size (34% of height) was too small
             BuildCoinTip();
             _menuCoinAdPulse = _menuCoinAd.border.gameObject.AddComponent<UiKit.Bob>();     // gentle pulse while the ad is ready
             _menuCoinAdPulse.amount = 0.045f; _menuCoinAdPulse.speed = 3f;
@@ -242,16 +243,17 @@ namespace CircuitBreaker.UI
 
         private void BuildCoinTip()
         {
-            var bubble = UiKit.Rounded(_menuCoinAd.border.transform, Color.Lerp(Theme.Surface2, Theme.Accent, 0.35f), 30f);
+            // Lives on the safe-area layer like the achievement toast (which does show), pinned under the ad button:
+            // top bar 36..116, ad row 136..204, tip right below it. Shown with SetAsLastSibling so it is drawn on top.
+            var bubble = UiKit.Rounded(_safe, Color.Lerp(Theme.Surface2, Theme.Accent, 0.35f), 30f);
             bubble.name = "CoinTip";
+            bubble.raycastTarget = false;
             _coinTip = bubble.gameObject;
             var br = bubble.rectTransform;
-            br.anchorMin = br.anchorMax = new Vector2(1f, 0f);
+            br.anchorMin = br.anchorMax = new Vector2(1f, 1f);
             br.pivot = new Vector2(1f, 1f);
-            br.anchoredPosition = new Vector2(0f, -10f);
+            br.anchoredPosition = new Vector2(-44f, -214f);
             br.sizeDelta = new Vector2(560f, 64f);
-            _coinTip.AddComponent<LayoutElement>().ignoreLayout = true;
-            var cv = _coinTip.AddComponent<Canvas>(); cv.overrideSorting = true; cv.sortingOrder = 20;     // above the title below
             var l = UiKit.Label(br, "Watch an ad for +" + Economy.CoinAdAmount + " free coins", Theme.Micro, Theme.Text, TextAnchor.MiddleCenter, bold: true);
             l.horizontalOverflow = HorizontalWrapMode.Overflow;
             UiKit.Stretch(l.rectTransform, 16, 0, 16, 0);
@@ -271,6 +273,7 @@ namespace CircuitBreaker.UI
             _coinTipAccum += dt;
             if (!_coinTip.activeSelf && _coinTipAccum >= CoinTipEvery && _menuCoinAd.button.interactable)
             {
+                _coinTip.transform.SetAsLastSibling();
                 _coinTip.SetActive(true);
                 _coinTipHideAt = now + CoinTipShown;
                 _coinTipAccum = 0f;

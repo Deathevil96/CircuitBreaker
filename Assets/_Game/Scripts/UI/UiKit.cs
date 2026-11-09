@@ -234,7 +234,7 @@ namespace CircuitBreaker.UI
             var row = Row(s.content, 14, TextAnchor.MiddleCenter);
             Stretch(row);
             if (iconName != null) { ub.icon = Icon(row, iconName, height * 0.34f, textC); Size(ub.icon.rectTransform, w: height * 0.34f, h: height * 0.34f); }
-            if (!string.IsNullOrEmpty(text))
+            if (text != null)      // "" still creates the label, so SetText can fill it later
             {
                 ub.label = Label(row, text, fontSize, textC, TextAnchor.MiddleCenter, bold: style != ButtonStyle.Ghost);
                 ub.label.horizontalOverflow = HorizontalWrapMode.Overflow;

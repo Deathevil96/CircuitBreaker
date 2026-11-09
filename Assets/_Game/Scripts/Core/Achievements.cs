@@ -39,7 +39,7 @@ namespace CircuitBreaker.Core
 
         public static int UnlockedCount { get { int n = 0; foreach (var a in All) if (a.Unlocked) n++; return n; } }
 
-        /// <summary>Unlocks anything newly satisfied, grants its reward, raises Unlocked. Returns the newly unlocked ones.</summary>
+        /// <summary>Unlocks anything newly satisfied, raises (achievements give no rewards) Unlocked. Returns the newly unlocked ones.</summary>
         public static List<Achievement> Evaluate()
         {
             var fresh = new List<Achievement>();
@@ -47,12 +47,6 @@ namespace CircuitBreaker.Core
             {
                 if (a.Unlocked || a.value() < a.target) continue;
                 SaveSystem.SetInt("ach_" + a.id, Clock.Today);
-                if (a.hints > 0)
-                {
-                    int added = SaveSystem.AddStock("hint", a.hints, Economy.HintCap);
-                    SaveSystem.Coins += (a.hints - added) * Economy.OverflowCoins("hint");
-                }
-                SaveSystem.Coins += a.coins;
                 fresh.Add(a);
             }
             if (fresh.Count > 0)

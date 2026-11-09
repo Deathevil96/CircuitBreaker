@@ -477,8 +477,7 @@ namespace CircuitBreaker.UI
 
         public void ShowAchievement(Achievement a)
         {
-            string reward = (a.coins > 0 ? "+" + a.coins + " coins" : "") + (a.hints > 0 ? "  +" + a.hints + " hint" : "");
-            _toastQueue.Enqueue(new[] { "Achievement unlocked", a.title + (reward.Length > 0 ? "   " + reward : "") });
+            _toastQueue.Enqueue(new[] { "Achievement unlocked", a.title });
         }
 
         private void UpdateToast()

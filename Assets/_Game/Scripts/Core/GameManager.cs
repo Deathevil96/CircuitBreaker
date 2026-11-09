@@ -651,7 +651,7 @@ namespace CircuitBreaker.Core
                 Log($"AD REWARD: +{Economy.CoinAdAmount} coins, {Economy.CoinAdsLeftToday()} left today");
                 UI.SetCoins(SaveSystem.Coins);
                 UI.ShowMenu(BuildMenuData());
-                UI.Toast($"+{Economy.CoinAdAmount} coins", 2.5f);
+                UI.ShowNotice("Free coins", $"+{Economy.CoinAdAmount} coins");
             });
         }
 

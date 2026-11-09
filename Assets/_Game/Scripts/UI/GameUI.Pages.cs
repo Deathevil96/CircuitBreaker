@@ -224,8 +224,7 @@ namespace CircuitBreaker.UI
                 UiKit.Size(bar.transform.parent, h: 8);
             }
 
-            string reward = (a.coins > 0 ? "+" + a.coins : "") + (a.hints > 0 ? "  +" + a.hints + " hint" : "");
-            var rl = UiKit.Label(row, done ? "" : (a.target > 1 ? a.Progress + "/" + a.target + "\n" : "") + reward, Theme.Micro + 1, Theme.Dim, TextAnchor.MiddleRight);
+            var rl = UiKit.Label(row, done ? "" : (a.target > 1 ? a.Progress + "/" + a.target : ""), Theme.Micro + 1, Theme.Dim, TextAnchor.MiddleRight);
             UiKit.Size(rl, w: 150);
         }
 
